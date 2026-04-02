@@ -13,7 +13,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 - Repository state: **proposal / pre-alpha**
 - Published version: **none**
-- Immediate target: **`v0.1.0`**
+- Immediate target: **`v0.2.0`**
 
 ---
 
@@ -30,7 +30,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 **Goal:** deliver a first executable version that is small, clear, and defensible.
 
-**Status:** In progress
+**Status:** Completed
 
 ### Implemented now
 
@@ -45,11 +45,12 @@ A serious proposal does not promise everything at once. It versions growth.
 - clear terminal-facing errors
 - minimum viable CLI output contract
 
-### Remaining to close `v0.1.0`
+### Delivered in `v0.1.0`
 
-- browser prerequisite diagnostics should be more explicit
-- release packaging and publishable install story still need to be closed
-- command help and docs should keep tightening around the real bootstrap behavior
+- interactive terminal experience with a styled TUI
+- scriptable screenshot capture with `shot`
+- tested layered architecture with orchestrator, adapters, CLI, and TUI
+- installation and usage documentation for local bootstrap workflows
 
 ### Still not included
 

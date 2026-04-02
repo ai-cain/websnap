@@ -8,9 +8,9 @@
 
 | Field | Status |
 | --- | --- |
-| Current phase | Bootstrap / `v0.1.0` in progress |
+| Current phase | Bootstrap complete / ready for `v0.2.0` |
 | Published release | None |
-| Immediate target | `v0.1.0` |
+| Immediate target | `v0.2.0` |
 | Base stack | **Go + chromedp + Bubble Tea** |
 | Documentation language | English-first |
 | CLI i18n | Deferred to an advanced version |
@@ -271,7 +271,7 @@ websnap shot https://example.com --full-page
 
 ## Roadmap summary
 
-- `v0.1.0` — interactive CLI + basic screenshot
+- `v0.1.0` — interactive CLI + basic screenshot ✅ completed as local milestone
 - `v0.2.0` — selector and full-page capture
 - `v0.3.0` — reproducibility and developer experience
 - `v0.4.0` — clip support and capture refinements
