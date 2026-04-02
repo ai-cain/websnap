@@ -2,7 +2,9 @@
 
 ## 1. Context
 
-`websnap` is envisioned as a Go CLI focused on **reproducible web UI screenshots**.
+`websnap` is a Go CLI focused on **reproducible web UI screenshots**.
+
+The bootstrap already implements the first screenshot path, but the architecture is still intentionally small and evolving.
 
 The goal is not to compete with full testing suites or media editors.  
 The goal is to solve one specific need well:
@@ -20,19 +22,19 @@ The CLI acts as an **orchestrator** for a headless browser.
 flowchart LR
     U[User] --> C[websnap CLI]
     C --> V[Argument validation]
-    V --> S[CaptureScreenshot use case]
-    S --> B[Browser adapter<br/>chromedp + headless Chromium]
+    V --> O[CaptureScreenshot orchestrator]
+    O --> B[Browser adapter<br/>chromedp + headless Chromium]
     B --> R[Page render]
     R --> I[PNG bytes]
-    S --> F[Filesystem writer]
-    F --> O[Output file]
+    O --> F[Filesystem writer]
+    F --> O2[Output file]
 ```
 
 ### Logical flow
 
 1. The user invokes `websnap shot <url>`.
 2. The CLI transforms flags into a `CaptureRequest`.
-3. The use case validates intent and decides how capture should happen.
+3. The orchestrator validates intent and coordinates capture.
 4. A `chromedp` adapter opens headless Chromium and renders the page.
 5. The browser produces image bytes.
 6. A writer persists the artifact and returns the final path.
@@ -42,7 +44,7 @@ flowchart LR
 ## 3. Architectural goals
 
 - keep the CLI simple for users
-- isolate browser technology from the core use case
+- isolate browser technology from the core orchestration
 - keep the domain small and explicit
 - allow growth toward selector, clip, GIF, and i18n without breaking the main path
 - favor maintainability over cleverness
@@ -54,7 +56,7 @@ flowchart LR
 - do not design a general-purpose automation engine yet
 - do not couple the tool to CI providers or external services
 - do not introduce global configuration too early
-- do not mix screenshot and GIF into the same base use case
+- do not mix screenshot and GIF into the same base orchestrator
 - do not treat documentation translation as product i18n
 
 ---
@@ -119,7 +121,7 @@ If it enters too early, the screenshot path gets polluted from day one.
 - runtime i18n belongs to the product surface, not to repository prose
 - localization becomes cleaner when errors and help text are already structured
 
-**Rule:** domain and use case layers should expose error codes or typed failures; the CLI layer maps those to localized strings later.
+**Rule:** domain and orchestrator layers should expose error codes or typed failures; the CLI layer maps those to localized strings later.
 
 ---
 
@@ -138,9 +140,8 @@ internal/
   domain/
     capture_request.go
     capture_result.go
-    output_path.go
 
-  usecase/
+  orchestrator/
     capture_screenshot.go
 
   port/
@@ -156,14 +157,7 @@ internal/
         writer.go
 
   support/
-    validate/
-    naming/
     errors/
-
-  i18n/                 # planned for v1.1.0+
-    catalog.go
-    en/
-    es/
 
 docs/
   README.md
@@ -171,12 +165,15 @@ docs/
   FEATURES.md
 ```
 
+Future additions such as `internal/i18n/` should appear only when `v1.1.0` actually starts.
+
 ### Why this structure
 
 Because it cleanly separates:
 
 - **entry point** (`cli`)
-- **business intent** (`domain`, `usecase`)
+- **business intent** (`domain`)
+- **coordination** (`orchestrator`)
 - **ports** (`port`)
 - **technical details** (`adapter`)
 
@@ -210,7 +207,7 @@ Represents the business result:
 
 ## 8. Primary ports
 
-The use case should depend on interfaces, not on `chromedp` directly.
+The orchestrator should depend on interfaces, not on `chromedp` directly.
 
 ```go
 type BrowserPort interface {
@@ -230,23 +227,23 @@ The point is not to create twenty interfaces; the point is to isolate two real d
 
 ---
 
-## 9. `shot` use-case sequence
+## 9. `shot` execution sequence
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant CLI as CLI
-    participant UC as CaptureScreenshot
+    participant O as CaptureScreenshot orchestrator
     participant B as BrowserPort
     participant W as WriterPort
 
     U->>CLI: websnap shot https://example.com
-    CLI->>UC: CaptureRequest
-    UC->>B: CaptureScreenshot(req)
-    B-->>UC: PNG bytes
-    UC->>W: Save(path, bytes)
-    W-->>UC: ok
-    UC-->>CLI: CaptureResult
+    CLI->>O: CaptureRequest
+    O->>B: CaptureScreenshot(req)
+    B-->>O: PNG bytes
+    O->>W: Save(path, bytes)
+    W-->>O: ok
+    O-->>CLI: CaptureResult
     CLI-->>U: final file path
 ```
 
@@ -269,7 +266,7 @@ No meaningless “failed” messages.
 
 ### i18n implication
 
-If the product will be localized later, the CLI should map **error codes** or **typed failures** to message catalogs instead of hard-coding English or Spanish deep in the use case layer.
+If the product will be localized later, the CLI should map **error codes** or **typed failures** to message catalogs instead of hard-coding English or Spanish deep in the orchestrator or domain layer.
 
 ---
 
@@ -300,7 +297,7 @@ This keeps product i18n intentional instead of becoming string-copy chaos.
 
 Stabilize the path:
 
-`CLI -> CaptureScreenshot -> BrowserPort -> WriterPort`
+`CLI -> CaptureScreenshot orchestrator -> BrowserPort -> WriterPort`
 
 ### Then
 
@@ -319,7 +316,7 @@ Add a separate GIF pipeline:
 - `EncoderPort`
 - FFmpeg integration
 
-That deserves its own use case. It should not hang off `shot` as a patch.
+That deserves its own orchestrator. It should not hang off `shot` as a patch.
 
 ---
 
@@ -341,6 +338,7 @@ Because it shows judgment, not just enthusiasm:
 
 - intentionally reduced scope
 - meaningful separation of layers
+- explicit orchestrator layer
 - justified technology choice
 - controlled growth by version
 - clear distinction between V1 and backlog

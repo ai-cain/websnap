@@ -8,7 +8,7 @@ This folder organizes the technical proposal so the project can be explained cle
 
 | Field | Status |
 | --- | --- |
-| Current phase | Proposal / pre-alpha |
+| Current phase | Bootstrap / `v0.1.0` in progress |
 | Published release | None |
 | Immediate target | `v0.1.0` |
 | Language | English-first |
@@ -36,5 +36,6 @@ This folder organizes the technical proposal so the project can be explained cle
 - what problem `websnap` solves
 - why Go was chosen
 - how a terminal tool can capture a web page
+- what has already been implemented in the bootstrap
 - what belongs in V1 and what is intentionally deferred
 - how the project can grow into GIF and localization without polluting the first implementation

@@ -19,6 +19,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 ## Roadmap conventions
 
+- **In progress**: implemented partially and actively being completed
 - **Committed**: expected to land in that version unless scope changes materially
 - **Candidate**: valid direction, but not committed yet
 - **Deferred**: intentionally postponed
@@ -29,9 +30,9 @@ A serious proposal does not promise everything at once. It versions growth.
 
 **Goal:** deliver a first executable version that is small, clear, and defensible.
 
-**Status:** Committed
+**Status:** In progress
 
-### Scope
+### Implemented now
 
 - `websnap shot <url>`
 - URL validation
@@ -43,7 +44,13 @@ A serious proposal does not promise everything at once. It versions growth.
 - clear terminal-facing errors
 - minimum viable CLI output contract
 
-### Not included
+### Remaining to close `v0.1.0`
+
+- browser prerequisite diagnostics should be more explicit
+- release packaging and publishable install story still need to be closed
+- command help and docs should keep tightening around the real bootstrap behavior
+
+### Still not included
 
 - `--selector`
 - `--full-page`

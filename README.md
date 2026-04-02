@@ -8,15 +8,15 @@
 
 | Field | Status |
 | --- | --- |
-| Current phase | Proposal / pre-alpha |
+| Current phase | Bootstrap / `v0.1.0` in progress |
 | Published release | None |
 | Immediate target | `v0.1.0` |
 | Base stack | **Go + chromedp** |
 | Documentation language | English-first |
 | CLI i18n | Deferred to an advanced version |
 
-> **Important:** this repository does **not** contain a runnable implementation yet.  
-> This README documents the proposal, the first-release scope, and the architectural direction.
+> **Important:** this repository now contains an initial Go bootstrap for `shot`, but it is **not a published release yet**.  
+> The README documents both the implemented base and the planned direction for the remaining roadmap.
 
 ---
 
@@ -81,9 +81,9 @@ The first useful release should stay small but serious: **stable screenshot capt
 
 ---
 
-## Planned CLI syntax
+## Current bootstrap commands
 
-> Target syntax. **Not implemented yet**.
+Already implemented in the current bootstrap:
 
 ```bash
 websnap shot https://example.com
@@ -91,7 +91,7 @@ websnap shot https://example.com --width 1440 --height 900
 websnap shot https://example.com --out ./captures/home.png
 ```
 
-Capabilities planned immediately after the initial bootstrap:
+Planned next:
 
 ```bash
 websnap shot https://example.com --selector ".hero"
@@ -139,21 +139,22 @@ media/
 
 ## Current repository reality
 
-At the moment, this repository contains the **documentation foundation** of the project:
+At the moment, this repository contains:
 
-- problem definition
-- first-release scope
-- versioned roadmap
-- proposed architecture
+- an initial Go CLI bootstrap
+- the `shot` orchestration path
+- `chromedp` browser integration
+- filesystem output persistence
+- domain and CLI tests
+- versioned documentation and architecture notes
 
 Still to be built:
 
-- Go module
-- `websnap` command
-- `shot` use case
-- `chromedp` adapter
-- filesystem output writer
-- flag validation and error handling
+- selector capture
+- full-page capture
+- advanced diagnostics around browser prerequisites
+- GIF pipeline
+- release packaging and publishing
 
 ---
 
