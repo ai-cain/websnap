@@ -68,7 +68,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 **Goal:** move from “basic capture” to “useful UI capture”.
 
-**Status:** Committed
+**Status:** In progress
 
 ### Scope
 
@@ -77,6 +77,18 @@ A serious proposal does not promise everything at once. It versions growth.
 - consistent file naming strategy
 - basic protection against invalid paths
 - more descriptive selector-related failures
+
+### Implemented now
+
+- `--selector` in the scripted CLI path
+- domain validation for selector input
+- browser adapter support for CSS-selector screenshot capture
+
+### Remaining to close `v0.2.0`
+
+- `--full-page`
+- TUI support for selector and full-page configuration
+- improved user-facing examples for the new capture modes
 
 ### Main risk
 

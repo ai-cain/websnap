@@ -34,7 +34,7 @@ func TestShotCommandRun(t *testing.T) {
 		},
 		{
 			name: "successful execution",
-			args: []string{"https://example.com", "--width", "1200", "--height", "800"},
+			args: []string{"https://example.com", "--width", "1200", "--height", "800", "--selector", "#app"},
 			runner: &fakeShotRunner{
 				result: domain.CaptureResult{Path: "C:/captures/home.png"},
 			},
@@ -76,6 +76,10 @@ func TestShotCommandRun(t *testing.T) {
 
 				if tt.runner.received.Height != 800 {
 					t.Fatalf("runner received height = %d, want 800", tt.runner.received.Height)
+				}
+
+				if tt.runner.received.Selector != "#app" {
+					t.Fatalf("runner received selector = %q, want %q", tt.runner.received.Selector, "#app")
 				}
 			}
 		})

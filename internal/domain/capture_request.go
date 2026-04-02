@@ -9,10 +9,11 @@ import (
 )
 
 type CaptureRequest struct {
-	URL    string
-	Width  int64
-	Height int64
-	Out    string
+	URL      string
+	Width    int64
+	Height   int64
+	Selector string
+	Out      string
 }
 
 func (r CaptureRequest) Validate() error {
@@ -38,6 +39,10 @@ func (r CaptureRequest) Validate() error {
 		if ext != "" && ext != ".png" {
 			return apperrors.New(apperrors.CodeInvalidArgument, "output path must use the .png extension")
 		}
+	}
+
+	if strings.TrimSpace(r.Selector) == "" && r.Selector != "" {
+		return apperrors.New(apperrors.CodeInvalidArgument, "selector cannot be only whitespace")
 	}
 
 	return nil

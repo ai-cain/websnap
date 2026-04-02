@@ -13,10 +13,11 @@ func TestCaptureRequestValidate(t *testing.T) {
 		{
 			name: "valid request",
 			req: CaptureRequest{
-				URL:    "https://example.com",
-				Width:  1440,
-				Height: 900,
-				Out:    "captures/home.png",
+				URL:      "https://example.com",
+				Width:    1440,
+				Height:   900,
+				Selector: "#app",
+				Out:      "captures/home.png",
 			},
 			wantErr: false,
 		},
@@ -53,6 +54,16 @@ func TestCaptureRequestValidate(t *testing.T) {
 				Width:  1440,
 				Height: 900,
 				Out:    "captures/home.jpg",
+			},
+			wantErr: true,
+		},
+		{
+			name: "selector cannot be whitespace only",
+			req: CaptureRequest{
+				URL:      "https://example.com",
+				Width:    1440,
+				Height:   900,
+				Selector: "   ",
 			},
 			wantErr: true,
 		},

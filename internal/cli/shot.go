@@ -66,6 +66,7 @@ func (c ShotCommand) Run(args []string) int {
 
 	width := fs.Int64("width", 1440, "viewport width in pixels")
 	height := fs.Int64("height", 900, "viewport height in pixels")
+	selector := fs.String("selector", "", "CSS selector to capture instead of the viewport")
 	out := fs.String("out", "", "output path for the PNG file")
 
 	if err := fs.Parse(args[1:]); err != nil {
@@ -83,10 +84,11 @@ func (c ShotCommand) Run(args []string) int {
 	}
 
 	req := domain.CaptureRequest{
-		URL:    targetURL,
-		Width:  *width,
-		Height: *height,
-		Out:    *out,
+		URL:      targetURL,
+		Width:    *width,
+		Height:   *height,
+		Selector: *selector,
+		Out:      *out,
 	}
 
 	result, err := c.runner.Execute(context.Background(), req)
@@ -101,7 +103,7 @@ func (c ShotCommand) Run(args []string) int {
 
 func (c ShotCommand) printUsage() {
 	fmt.Fprintln(c.stderr, "Usage:")
-	fmt.Fprintln(c.stderr, "  websnap shot <url> [--width <px>] [--height <px>] [--out <path>]")
+	fmt.Fprintln(c.stderr, "  websnap shot <url> [--width <px>] [--height <px>] [--selector <css>] [--out <path>]")
 }
 
 func renderError(w io.Writer, err error) {
