@@ -1,49 +1,49 @@
-# Roadmap de features por versión
+# Feature roadmap by version
 
-Este documento separa dos cosas que MUCHAS veces se mezclan mal:
+This document separates two things that teams often mix badly:
 
-1. **lo comprometido**
-2. **lo deseable**
+1. **what is committed**
+2. **what is desirable**
 
-La idea es simple: una propuesta seria no promete todo al mismo tiempo. Versiona el crecimiento.
-
----
-
-## Estado actual
-
-- Estado del repo: **proposal / pre-alpha**
-- Versión publicada: **ninguna**
-- Próximo objetivo: **`v0.1.0`**
+A serious proposal does not promise everything at once. It versions growth.
 
 ---
 
-## Convenciones del roadmap
+## Current status
 
-- **Committed**: entra en esa versión salvo cambio fuerte de alcance
-- **Candidate**: idea válida, pero no comprometida todavía
-- **Deferred**: intencionalmente postergado
+- Repository state: **proposal / pre-alpha**
+- Published version: **none**
+- Immediate target: **`v0.1.0`**
 
 ---
 
-## `v0.1.0` — Bootstrap útil del CLI
+## Roadmap conventions
 
-**Objetivo:** tener una primera versión ejecutable, pequeña y defendible.
+- **Committed**: expected to land in that version unless scope changes materially
+- **Candidate**: valid direction, but not committed yet
+- **Deferred**: intentionally postponed
 
-**Estado:** Committed
+---
 
-### Alcance
+## `v0.1.0` — Useful CLI bootstrap
 
-- comando `websnap shot <url>`
-- validación de URL de entrada
-- viewport configurable:
+**Goal:** deliver a first executable version that is small, clear, and defensible.
+
+**Status:** Committed
+
+### Scope
+
+- `websnap shot <url>`
+- URL validation
+- configurable viewport:
   - `--width`
   - `--height`
-- salida configurable con `--out`
-- generación automática de `media/img`
-- mensajes de error claros
-- contrato mínimo de salida usable desde terminal
+- explicit output path with `--out`
+- automatic `media/img` creation
+- clear terminal-facing errors
+- minimum viable CLI output contract
 
-### Lo que NO entra
+### Not included
 
 - `--selector`
 - `--full-page`
@@ -51,132 +51,152 @@ La idea es simple: una propuesta seria no promete todo al mismo tiempo. Versiona
 - GIF
 - video
 - watch mode
-- configuración por archivo
+- file-based configuration
 
 ---
 
-## `v0.2.0` — Targets de captura
+## `v0.2.0` — Capture targets
 
-**Objetivo:** pasar de “captura básica” a “captura útil para UI work”.
+**Goal:** move from “basic capture” to “useful UI capture”.
 
-**Estado:** Committed
+**Status:** Committed
 
-### Alcance
+### Scope
 
 - `--selector`
 - `--full-page`
-- estrategia consistente de nombre de archivo
-- protección básica ante rutas inválidas
-- validación de selector y errores más descriptivos
+- consistent file naming strategy
+- basic protection against invalid paths
+- more descriptive selector-related failures
 
-### Riesgo principal
+### Main risk
 
-Capturar por selector introduce dependencia fuerte del render y del timing del DOM. Debe resolverse sin volver opaca la CLI.
+Element capture introduces a stronger dependency on DOM timing and render stability. It should be solved without making the CLI opaque.
 
 ---
 
-## `v0.3.0` — Reproducibilidad y experiencia de uso
+## `v0.3.0` — Reproducibility and developer experience
 
-**Objetivo:** hacer la herramienta más confiable para demos, documentación y automatización.
+**Goal:** make the tool more reliable for demos, documentation, and automation.
 
-**Estado:** Committed
+**Status:** Committed
 
-### Alcance
+### Scope
 
 - `--delay`
 - `--timeout`
-- salida más explícita en consola
-- códigos de salida previsibles
-- mejor ergonomía para `localhost`
+- more explicit console output
+- predictable exit codes
+- better ergonomics for `localhost`
 
-### Valor
+### Value
 
-Esta versión vuelve la herramienta mucho más defendible en escenarios reales, no solo en demos felices.
+This version makes the tool defensible in real work, not just in happy-path demos.
 
 ---
 
-## `v0.4.0` — Captura avanzada
+## `v0.4.0` — Advanced capture control
 
-**Objetivo:** agregar control más fino del área capturada.
+**Goal:** add more precise control over the captured area.
 
-**Estado:** Candidate
+**Status:** Candidate
 
-### Alcance candidato
+### Candidate scope
 
 - `--clip x,y,width,height`
-- validación geométrica del área
-- presets simples de viewport
+- geometric validation for the requested area
+- simple viewport presets
 
-### Motivo de no comprometerlo todavía
+### Why it is not committed yet
 
-El recorte fino parece simple, pero introduce validaciones visuales y reglas de consistencia que conviene agregar después de estabilizar el flujo básico.
+Precise clipping looks simple, but it brings visual validation rules and consistency concerns that should come only after the main path is stable.
 
 ---
 
-## `v0.5.0` — GIF experimental
+## `v0.5.0` — Experimental GIF pipeline
 
-**Objetivo:** abrir la puerta a capturas animadas sin prometer estabilidad temprana.
+**Goal:** open the door to motion capture without pretending it is stable too early.
 
-**Estado:** Candidate
+**Status:** Candidate
 
-### Alcance candidato
+### Candidate scope
 
-- comando `websnap gif <url>`
+- `websnap gif <url>`
 - `--duration`
 - `--fps`
-- captura secuencial de frames
-- integración con FFmpeg
+- sequential frame capture
+- FFmpeg integration
 
-### Razón para dejarlo aquí
+### Why it lives here
 
-GIF **no es una extensión menor** del screenshot. Es otro pipeline:
+GIF is **not** a minor extension of screenshot capture. It is a separate pipeline:
 
-- múltiple captura
-- sincronización temporal
+- multiple frames
+- temporal coordination
 - encoding
-- costo de rendimiento
-- dependencia adicional
+- performance cost
+- extra runtime dependency
 
-Por eso debe entrar como track separado y explícitamente experimental.
-
----
-
-## `v1.0.0` — Release estable
-
-**Objetivo:** consolidar `websnap` como herramienta confiable para screenshots desde terminal.
-
-**Estado:** Committed como dirección, alcance exacto por refinar
-
-### Resultado esperado
-
-- contrato CLI estable
-- flujo de screenshot sólido
-- documentación madura
-- errores previsibles
-- distribución clara del binario
-
-### Nota importante
-
-`v1.0.0` no obliga a incluir GIF. La estabilidad del producto puede centrarse primero en screenshots.
+That is why it should arrive as an explicit experimental track.
 
 ---
 
-## Backlog posterior a `v1.0.0`
+## `v1.0.0` — Stable release
 
-**Estado:** Deferred
+**Goal:** establish `websnap` as a reliable screenshot tool from the terminal.
 
-Ideas válidas, pero fuera del compromiso actual:
+**Status:** Committed as direction, exact scope still to be refined
+
+### Expected outcome
+
+- stable CLI contract
+- solid screenshot path
+- mature documentation
+- predictable error model
+- clear binary distribution story
+
+### Important note
+
+`v1.0.0` does not need GIF to be considered successful. Product stability can focus on screenshots first.
+
+---
+
+## `v1.1.0` — CLI internationalization
+
+**Goal:** keep English as the base language while enabling Spanish as a supported user-facing locale.
+
+**Status:** Committed after core stabilization
+
+### Scope
+
+- localized CLI help output
+- localized error and feedback messages
+- message catalog structure for `en` and `es`
+- fallback to English when a translation is missing
+
+### Architectural rule
+
+Localization belongs in the presentation layer.  
+Use cases and domain errors should expose codes or typed failures, not hard-coded prose.
+
+---
+
+## Post-`v1.1.0` backlog
+
+**Status:** Deferred
+
+Valid ideas, but outside the current commitment:
 
 - video (`mp4` / `webm`)
-- archivo `.websnap.yaml`
-- modo watch
-- uploads a S3 / Cloudinary
-- presets por proyecto
-- autenticación avanzada
+- `.websnap.yaml`
+- watch mode
+- uploads to S3 / Cloudinary
+- project-level presets
+- advanced authentication
 
 ---
 
-## Regla de evolución
+## Evolution rule
 
-Si una feature agrega complejidad de runtime, dependencias extra o un pipeline distinto, **no entra por entusiasmo**.  
-Primero se protege la ruta principal: `shot`.
+If a feature adds runtime complexity, new dependencies, or a distinct execution pipeline, it does **not** enter because it sounds exciting.  
+The main path must stay protected first: `shot`.

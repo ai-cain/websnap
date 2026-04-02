@@ -1,28 +1,29 @@
-# Documentación de websnap
+# websnap documentation
 
-Esta carpeta organiza la propuesta técnica del proyecto para que pueda explicarse con claridad, tanto al construirla como al presentarla.
+This folder organizes the technical proposal so the project can be explained clearly both during implementation and in an interview setting.
 
 ---
 
-## Estado documental
+## Documentation status
 
-| Campo | Estado |
+| Field | Status |
 | --- | --- |
-| Fase actual | Proposal / pre-alpha |
-| Release publicado | Ninguno |
-| Próximo objetivo | `v0.1.0` |
-| Enfoque | Captura de screenshots antes que GIF |
+| Current phase | Proposal / pre-alpha |
+| Published release | None |
+| Immediate target | `v0.1.0` |
+| Language | English-first |
+| i18n strategy | Planned for the CLI after the core is stable |
 
 ---
 
-## Mapa de documentos
+## Document map
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — diseño técnico, decisiones base y estructura propuesta en Go
-- [`FEATURES.md`](FEATURES.md) — roadmap versionado, alcance por release y backlog
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — technical design, core decisions, and proposed Go structure
+- [`FEATURES.md`](FEATURES.md) — versioned roadmap, release scope, and backlog
 
 ---
 
-## Orden recomendado de lectura
+## Recommended reading order
 
 1. `../README.md`
 2. `ARCHITECTURE.md`
@@ -30,10 +31,10 @@ Esta carpeta organiza la propuesta técnica del proyecto para que pueda explicar
 
 ---
 
-## Qué debe responder esta documentación
+## What these docs should answer
 
-- qué problema resuelve `websnap`
-- por qué se eligió Go
-- cómo una herramienta de terminal puede capturar una página
-- qué entra en V1 y qué se difiere
-- cómo crecer a GIF sin romper el diseño base
+- what problem `websnap` solves
+- why Go was chosen
+- how a terminal tool can capture a web page
+- what belongs in V1 and what is intentionally deferred
+- how the project can grow into GIF and localization without polluting the first implementation

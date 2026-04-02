@@ -1,87 +1,89 @@
 # websnap
 
-> Propuesta de CLI en Go para capturas reproducibles de interfaces web desde terminal.
+> Go CLI proposal for reproducible web UI screenshots from the terminal.
 
 ---
 
-## Estado del proyecto
+## Project status
 
-| Campo | Estado |
+| Field | Status |
 | --- | --- |
-| Fase actual | Proposal / pre-alpha |
-| Release publicado | Ninguno |
-| Próximo objetivo | `v0.1.0` |
-| Stack base elegido | **Go + chromedp** |
-| Estado de GIF | Diferido a versiones posteriores |
+| Current phase | Proposal / pre-alpha |
+| Published release | None |
+| Immediate target | `v0.1.0` |
+| Base stack | **Go + chromedp** |
+| Documentation language | English-first |
+| CLI i18n | Deferred to an advanced version |
 
-> **Importante:** este repositorio todavía **no contiene una implementación ejecutable**.  
-> Este README describe la propuesta, el alcance de la primera versión y la dirección arquitectónica.
-
----
-
-## Qué problema resuelve
-
-`websnap` busca resolver un problema concreto: **capturar interfaces web de forma reproducible, rápida y scriptable**, sin depender de abrir herramientas manuales ni repetir el mismo flujo visual una y otra vez.
-
-Casos típicos:
-
-- documentar componentes o pantallas
-- generar evidencia visual en revisiones
-- capturar vistas locales (`localhost`) o remotas
-- preparar material para demos, PRs y portafolio
-- automatizar capturas desde scripts o CI
+> **Important:** this repository does **not** contain a runnable implementation yet.  
+> This README documents the proposal, the first-release scope, and the architectural direction.
 
 ---
 
-## La pregunta importante: ¿cómo una CLI toma una captura si vive en terminal?
+## What problem it solves
 
-La terminal **no renderiza la web**. Lo que hace la CLI es **orquestar un navegador headless**.
+`websnap` is meant to solve one focused problem well: **capture web UIs in a reproducible, scriptable, terminal-friendly way**.
 
-Flujo propuesto:
+Typical use cases:
 
-1. El usuario ejecuta `websnap shot <url>`.
-2. La CLI parsea argumentos y valida la entrada.
-3. La CLI abre un navegador Chromium en modo headless.
-4. El navegador carga la URL y renderiza la interfaz fuera de pantalla.
-5. La CLI le pide al navegador capturar:
-   - viewport actual
-   - página completa
-   - o un elemento por selector
-6. La CLI guarda el PNG en disco y devuelve la ruta generada.
-
-En resumen: **la terminal no “toma la foto”**; la CLI **dirige** a un navegador headless para que la tome.
+- documenting pages and components
+- generating visual evidence for reviews
+- capturing local (`localhost`) and remote URLs
+- preparing assets for demos, PRs, and portfolio material
+- automating screenshots from scripts or CI workflows
 
 ---
 
-## Objetivo del primer release
+## The key question: how can a terminal tool take a screenshot?
 
-El primer release útil apunta a una V1 pequeña pero seria: **captura de screenshots estable**.
+The terminal does **not** render the web.  
+The CLI simply **orchestrates a headless browser**.
 
-### Alcance comprometido para `v0.1.0`
+Proposed flow:
 
-- comando `shot`
-- captura desde URL
-- configuración de viewport (`--width`, `--height`)
-- ruta de salida explícita con `--out`
-- creación automática de `media/img`
-- mensajes de error claros
-- contrato CLI simple y defendible
+1. The user runs `websnap shot <url>`.
+2. The CLI parses arguments and validates the request.
+3. The CLI starts a headless Chromium instance.
+4. Chromium loads the page and renders it off-screen.
+5. The CLI tells the browser what to capture:
+   - current viewport
+   - full page
+   - or a specific element
+6. The CLI writes the PNG to disk and returns the resulting path.
 
-### Fuera de alcance para `v0.1.0`
+In other words: **the terminal does not take the picture**; the CLI **directs** a headless browser to do it.
+
+---
+
+## First release goal
+
+The first useful release should stay small but serious: **stable screenshot capture**.
+
+### Committed scope for `v0.1.0`
+
+- `shot` command
+- URL-based capture
+- configurable viewport via `--width` and `--height`
+- explicit output path via `--out`
+- automatic `media/img` creation
+- clear error messages
+- simple, defensible CLI contract
+
+### Out of scope for `v0.1.0`
 
 - GIF
 - video
 - watch mode
-- uploads a servicios externos
-- archivo de configuración
-- autenticación compleja
-- automatizaciones avanzadas tipo test runner
+- third-party uploads
+- config file
+- advanced authentication
+- test-runner-like automation
 
 ---
 
-## CLI objetivo de la propuesta
+## Planned CLI syntax
 
-> Sintaxis objetivo. **Todavía no implementada**.
+> Target syntax. **Not implemented yet**.
 
 ```bash
 websnap shot https://example.com
@@ -89,7 +91,7 @@ websnap shot https://example.com --width 1440 --height 900
 websnap shot https://example.com --out ./captures/home.png
 ```
 
-Capacidades previstas inmediatamente después del bootstrap inicial:
+Capabilities planned immediately after the initial bootstrap:
 
 ```bash
 websnap shot https://example.com --selector ".hero"
@@ -98,34 +100,34 @@ websnap shot https://example.com --full-page
 
 ---
 
-## Por qué Go
+## Why Go
 
-Se elige **Go** por razones de producto y distribución, no por moda:
+Go is the proposed choice for product reasons, not trend chasing:
 
-- binario único y fácil de distribuir
-- buena experiencia para CLI y automatización
-- menor fricción en CI
-- arranque rápido y mantenimiento simple
-- base sólida para crecer sin cargar el proyecto con tooling innecesario
+- single distributable binary
+- excellent fit for CLI tooling
+- low operational friction in CI
+- fast startup and simple maintenance
+- strong base for growth without dragging unnecessary tooling into the project
 
-Para la primera etapa, la decisión propuesta es:
+Initial technical direction:
 
-- **Lenguaje:** Go
-- **Motor de navegador:** `chromedp`
-- **Procesamiento de GIF a futuro:** FFmpeg, pero fuera de `v0.1.0`
+- **Language:** Go
+- **Browser engine:** `chromedp`
+- **Future GIF processing:** FFmpeg, but outside `v0.1.0`
 
 ---
 
-## Estructura de salida propuesta
+## Proposed output structure
 
-La herramienta creará la salida en la **ruta desde la que se ejecute el comando**, no dentro del repositorio:
+Artifacts should be written to the **current execution directory**, not to the repository itself:
 
 ```text
 media/
   └── img/
 ```
 
-Versiones futuras podrían sumar:
+Later versions may extend that to:
 
 ```text
 media/
@@ -135,57 +137,58 @@ media/
 
 ---
 
-## Estado real del repositorio hoy
+## Current repository reality
 
-Hoy este repositorio contiene la **documentación base de la propuesta**:
+At the moment, this repository contains the **documentation foundation** of the project:
 
-- definición del problema
-- alcance inicial
-- roadmap por versiones
-- arquitectura propuesta
+- problem definition
+- first-release scope
+- versioned roadmap
+- proposed architecture
 
-Pendiente por construir:
+Still to be built:
 
-- módulo Go
-- comando `websnap`
-- caso de uso `shot`
-- adaptador `chromedp`
-- manejo de salida a disco
-- validación de flags y errores
-
----
-
-## Documentación del proyecto
-
-- [`docs/README.md`](docs/README.md) — índice documental
-- [`docs/FEATURES.md`](docs/FEATURES.md) — roadmap por versiones
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — arquitectura propuesta en Go
+- Go module
+- `websnap` command
+- `shot` use case
+- `chromedp` adapter
+- filesystem output writer
+- flag validation and error handling
 
 ---
 
-## Roadmap resumido
+## Documentation map
 
-- `v0.1.0` — bootstrap del CLI + captura básica
-- `v0.2.0` — selector y full-page
-- `v0.3.0` — mejoras de reproducibilidad y DX
-- `v0.4.0` — clip y refinamientos de captura
-- `v0.5.0` — GIF experimental
-- `v1.0.0` — release estable
-
-El detalle fino vive en [`docs/FEATURES.md`](docs/FEATURES.md).
+- [`docs/README.md`](docs/README.md) — documentation index
+- [`docs/FEATURES.md`](docs/FEATURES.md) — versioned feature roadmap
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — proposed Go architecture
 
 ---
 
-## Principios de diseño
+## Roadmap summary
 
-- **reproducibilidad sobre magia**
-- **una V1 pequeña, pero sólida**
-- **contrato CLI simple**
-- **separar screenshots de GIF para no contaminar el diseño**
-- **arquitectura extensible sin sobreingeniería**
+- `v0.1.0` — CLI bootstrap + basic screenshot
+- `v0.2.0` — selector and full-page capture
+- `v0.3.0` — reproducibility and developer experience
+- `v0.4.0` — clip support and capture refinements
+- `v0.5.0` — experimental GIF pipeline
+- `v1.0.0` — stable release
+- `v1.1.0` — CLI internationalization (`en` / `es`)
+
+Detailed version planning lives in [`docs/FEATURES.md`](docs/FEATURES.md).
 
 ---
 
-## Licencia
+## Design principles
 
-Pendiente de definir formalmente en archivo `LICENSE`.
+- **reproducibility over magic**
+- **small V1, solid foundations**
+- **simple CLI contract**
+- **keep screenshots and GIF on separate evolution tracks**
+- **extensible architecture without premature complexity**
+
+---
+
+## License
+
+Still pending formal definition in a root `LICENSE` file.

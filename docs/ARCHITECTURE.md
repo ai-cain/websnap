@@ -1,114 +1,129 @@
-# Arquitectura propuesta de websnap
+# Proposed architecture for websnap
 
-## 1. Contexto
+## 1. Context
 
-`websnap` se plantea como una CLI en Go enfocada en **capturas reproducibles de interfaces web**.
+`websnap` is envisioned as a Go CLI focused on **reproducible web UI screenshots**.
 
-La meta no es competir con suites completas de testing ni con editores multimedia.  
-La meta es resolver bien una necesidad específica:
+The goal is not to compete with full testing suites or media editors.  
+The goal is to solve one specific need well:
 
-> pedir una captura desde terminal, obtener un archivo predecible y dejar una base limpia para crecer.
+> request a capture from the terminal, get a predictable file, and keep a clean foundation for future growth.
 
 ---
 
-## 2. Pregunta base: ¿cómo una herramienta de terminal captura una web?
+## 2. Foundational question: how can a terminal tool capture a web page?
 
-La terminal no renderiza HTML, CSS ni JavaScript.  
-La CLI actúa como **orquestador** de un navegador headless.
+The terminal does not render HTML, CSS, or JavaScript.  
+The CLI acts as an **orchestrator** for a headless browser.
 
 ```mermaid
 flowchart LR
-    U[Usuario] --> C[CLI websnap]
-    C --> V[Validador de argumentos]
-    V --> S[Caso de uso CaptureScreenshot]
-    S --> B[Adaptador de navegador<br/>chromedp + Chromium headless]
-    B --> R[Render de la página]
-    R --> I[Bytes PNG]
-    S --> F[Writer de filesystem]
-    F --> O[Archivo de salida]
+    U[User] --> C[websnap CLI]
+    C --> V[Argument validation]
+    V --> S[CaptureScreenshot use case]
+    S --> B[Browser adapter<br/>chromedp + headless Chromium]
+    B --> R[Page render]
+    R --> I[PNG bytes]
+    S --> F[Filesystem writer]
+    F --> O[Output file]
 ```
 
-### Flujo lógico
+### Logical flow
 
-1. El usuario invoca `websnap shot <url>`.
-2. La capa CLI transforma flags en un `CaptureRequest`.
-3. El caso de uso valida la intención y decide cómo capturar.
-4. Un adaptador `chromedp` abre Chromium headless y renderiza la URL.
-5. El navegador produce la imagen.
-6. Un writer persiste el resultado y devuelve la ruta final.
-
----
-
-## 3. Objetivos arquitectónicos
-
-- **CLI simple** para el usuario
-- **aislar la tecnología del navegador**
-- **mantener el dominio pequeño y explícito**
-- **permitir crecer a selector, clip y GIF sin romper la ruta principal**
-- **favorecer mantenibilidad sobre trucos**
+1. The user invokes `websnap shot <url>`.
+2. The CLI transforms flags into a `CaptureRequest`.
+3. The use case validates intent and decides how capture should happen.
+4. A `chromedp` adapter opens headless Chromium and renders the page.
+5. The browser produces image bytes.
+6. A writer persists the artifact and returns the final path.
 
 ---
 
-## 4. No objetivos arquitectónicos para la primera etapa
+## 3. Architectural goals
 
-- no diseñar todavía un motor de automatización genérico
-- no acoplar la herramienta a CI o servicios externos
-- no introducir configuración global desde el inicio
-- no mezclar screenshot y GIF en el mismo caso de uso base
-
----
-
-## 5. Decisiones base
-
-### ADR-001 — Elegir Go
-
-**Decisión:** usar Go como lenguaje principal.
-
-**Por qué:**
-
-- binario distribuible
-- gran fit para CLI
-- baja fricción operativa
-- buen equilibrio entre simplicidad y estructura
-
-**Alternativa considerada:** Node.js + Playwright  
-**Por qué no en esta etapa:** acelera prototipado, pero complica más la distribución y el runtime para una herramienta que quiere comportarse como binario de sistema.
+- keep the CLI simple for users
+- isolate browser technology from the core use case
+- keep the domain small and explicit
+- allow growth toward selector, clip, GIF, and i18n without breaking the main path
+- favor maintainability over cleverness
 
 ---
 
-### ADR-002 — Empezar con `chromedp`
+## 4. Non-goals for the first stage
 
-**Decisión:** usar `chromedp` como adaptador de navegador para la ruta de screenshot inicial.
-
-**Por qué:**
-
-- integración natural con Go
-- buena base para screenshot headless
-- menor complejidad conceptual para V1
-
-**Alternativa considerada:** Playwright  
-**Por qué no como primera elección:** es excelente para automatización rica, pero para una primera CLI enfocada en captura introduce más piezas de las necesarias.
+- do not design a general-purpose automation engine yet
+- do not couple the tool to CI providers or external services
+- do not introduce global configuration too early
+- do not mix screenshot and GIF into the same base use case
+- do not treat documentation translation as product i18n
 
 ---
 
-### ADR-003 — Diferir GIF
+## 5. Core decisions
 
-**Decisión:** no meter GIF en la primera ruta de implementación.
+### ADR-001 — Choose Go
 
-**Por qué:**
+**Decision:** use Go as the primary language.
 
-Porque GIF es otro problema:
+**Why:**
 
-- secuencia de frames
-- control temporal
+- distributable binary
+- excellent fit for CLI tooling
+- low operational friction
+- strong balance between simplicity and structure
+
+**Alternative considered:** Node.js + Playwright  
+**Why not in this phase:** it speeds up prototyping, but it complicates packaging and runtime expectations for a tool that aims to behave like a system binary.
+
+---
+
+### ADR-002 — Start with `chromedp`
+
+**Decision:** use `chromedp` as the browser adapter for the initial screenshot path.
+
+**Why:**
+
+- natural integration with Go
+- strong fit for headless screenshot capture
+- lower conceptual overhead for V1
+
+**Alternative considered:** Playwright  
+**Why not as the first choice:** it is excellent for richer automation, but it introduces more moving parts than the first release needs.
+
+---
+
+### ADR-003 — Defer GIF
+
+**Decision:** keep GIF out of the first implementation path.
+
+**Why:**
+
+Because GIF is a different problem:
+
+- frame sequencing
+- temporal control
 - encoding
-- dependencia de FFmpeg u otro encoder
+- extra dependency management
 
-Si se mezcla demasiado pronto con `shot`, el diseño nace contaminado.
+If it enters too early, the screenshot path gets polluted from day one.
 
 ---
 
-## 6. Estructura propuesta del código
+### ADR-004 — Keep English-first docs, add CLI i18n later
+
+**Decision:** keep documentation in English first, while planning localized CLI messages for a later version.
+
+**Why:**
+
+- English-first docs are better for broader reach and interview presentation
+- runtime i18n belongs to the product surface, not to repository prose
+- localization becomes cleaner when errors and help text are already structured
+
+**Rule:** domain and use case layers should expose error codes or typed failures; the CLI layer maps those to localized strings later.
+
+---
+
+## 6. Proposed code structure
 
 ```text
 cmd/
@@ -131,7 +146,6 @@ internal/
   port/
     browser.go
     writer.go
-    clock.go
 
   adapter/
     browser/
@@ -140,14 +154,16 @@ internal/
     writer/
       filesystem/
         writer.go
-    clock/
-      system/
-        clock.go
 
   support/
     validate/
     naming/
     errors/
+
+  i18n/                 # planned for v1.1.0+
+    catalog.go
+    en/
+    es/
 
 docs/
   README.md
@@ -155,46 +171,46 @@ docs/
   FEATURES.md
 ```
 
-### Por qué esta estructura
+### Why this structure
 
-Porque separa claramente:
+Because it cleanly separates:
 
-- **entrada** (`cli`)
-- **intención del negocio** (`domain`, `usecase`)
-- **puertos** (`port`)
-- **detalles técnicos** (`adapter`)
+- **entry point** (`cli`)
+- **business intent** (`domain`, `usecase`)
+- **ports** (`port`)
+- **technical details** (`adapter`)
 
-Eso permite cambiar el motor de navegador o la estrategia de salida sin reescribir el contrato principal.
+That makes it possible to change browser tooling or output persistence without rewriting the main contract.
 
 ---
 
-## 7. Modelo conceptual mínimo
+## 7. Minimum conceptual model
 
 ### `CaptureRequest`
 
-Representa la intención del usuario:
+Represents user intent:
 
 - URL
-- ancho
-- alto
-- ruta de salida
-- modo de captura
-- selector opcional
-- flags de comportamiento futuras
+- width
+- height
+- output path
+- capture mode
+- optional selector
+- future behavioral flags
 
 ### `CaptureResult`
 
-Representa el resultado de negocio:
+Represents the business result:
 
-- ruta final del archivo
-- dimensiones resueltas
-- metadatos básicos de la captura
+- final file path
+- resolved dimensions
+- basic capture metadata
 
 ---
 
-## 8. Puertos principales
+## 8. Primary ports
 
-La idea es que el caso de uso dependa de interfaces, no de `chromedp` directamente.
+The use case should depend on interfaces, not on `chromedp` directly.
 
 ```go
 type BrowserPort interface {
@@ -206,19 +222,19 @@ type WriterPort interface {
 }
 ```
 
-No hace falta sobrediseñar más en esta etapa.  
-El punto no es crear veinte interfaces; el punto es **aislar dos dependencias reales**:
+There is no reason to overdesign beyond this at the start.  
+The point is not to create twenty interfaces; the point is to isolate two real dependencies:
 
-1. navegador
-2. filesystem
+1. browser execution
+2. filesystem persistence
 
 ---
 
-## 9. Secuencia del caso de uso `shot`
+## 9. `shot` use-case sequence
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuario
+    participant U as User
     participant CLI as CLI
     participant UC as CaptureScreenshot
     participant B as BrowserPort
@@ -231,77 +247,104 @@ sequenceDiagram
     UC->>W: Save(path, bytes)
     W-->>UC: ok
     UC-->>CLI: CaptureResult
-    CLI-->>U: ruta final del archivo
+    CLI-->>U: final file path
 ```
 
 ---
 
-## 10. Manejo de errores esperado
+## 10. Error-handling expectations
 
-La herramienta debe fallar de forma entendible. Ejemplos:
+Failures must be understandable. Examples:
 
-- URL inválida
-- navegador no disponible
-- timeout de carga
-- selector inexistente
-- ruta de salida no escribible
+- invalid URL
+- browser not available
+- page load timeout
+- selector not found
+- output path not writable
 
-### Regla
+### Rule
 
-Los errores deben subir con contexto.  
-Nada de mensajes genéricos tipo “failed”.
+Errors should bubble up with context.  
+No meaningless “failed” messages.
+
+### i18n implication
+
+If the product will be localized later, the CLI should map **error codes** or **typed failures** to message catalogs instead of hard-coding English or Spanish deep in the use case layer.
 
 ---
 
-## 11. Estrategia de evolución
+## 11. Localization strategy
 
-### Primero
+Localization should happen at the **presentation boundary**, not inside the domain.
 
-Consolidar la ruta:
+### Initial phase
+
+- English help text
+- English user-facing messages
+- English docs
+
+### Advanced phase
+
+- `en` and `es` message catalogs
+- locale-aware help output
+- locale-aware feedback and errors
+- English fallback when a translation is missing
+
+This keeps product i18n intentional instead of becoming string-copy chaos.
+
+---
+
+## 12. Evolution strategy
+
+### First
+
+Stabilize the path:
 
 `CLI -> CaptureScreenshot -> BrowserPort -> WriterPort`
 
-### Después
+### Then
 
-Agregar capacidades sin romper la base:
+Add features without breaking the foundation:
 
 - selector
 - full-page
 - delay
 - clip
 
-### Mucho después
+### Much later
 
-Agregar un pipeline separado para GIF:
+Add a separate GIF pipeline:
 
 - `FrameCapturePort`
 - `EncoderPort`
-- integración FFmpeg
+- FFmpeg integration
 
-Eso merece su propio caso de uso. NO debe colgarse de `shot` como parche.
+That deserves its own use case. It should not hang off `shot` as a patch.
 
 ---
 
-## 12. Riesgos y mitigaciones
+## 13. Risks and mitigations
 
-| Riesgo | Impacto | Mitigación |
+| Risk | Impact | Mitigation |
 | --- | --- | --- |
-| Dependencia de Chromium/headless | La CLI no puede capturar | Detectar prerequisitos y fallar con mensaje claro |
-| Timing inconsistente del DOM | Capturas inestables | Introducir `--delay` y timeouts controlados en versiones siguientes |
-| Paths distintos por SO | Errores de escritura | Centralizar construcción de rutas |
-| Mezclar screenshot y GIF muy pronto | Arquitectura inflada | Separar roadmap y pipelines |
+| Chromium/headless dependency | The CLI cannot capture | Detect prerequisites and fail with a clear message |
+| DOM timing instability | Unreliable captures | Introduce `--delay` and controlled timeouts in later versions |
+| Cross-platform path differences | Write failures | Centralize path construction |
+| Screenshot/GIF mixing too early | Inflated architecture | Keep separate roadmap and execution paths |
+| Localized strings hard-coded too early | Messy future i18n | Use codes/typed errors and map them in the CLI layer |
 
 ---
 
-## 13. Qué hace esta arquitectura defendible en una entrevista
+## 14. Why this architecture is interview-defensible
 
-Porque muestra criterio, no solo ganas de codificar:
+Because it shows judgment, not just enthusiasm:
 
-- alcance reducido con intención
-- separación de capas con sentido práctico
-- elección tecnológica justificada
-- crecimiento controlado por versiones
-- distinción clara entre V1 y backlog
+- intentionally reduced scope
+- meaningful separation of layers
+- justified technology choice
+- controlled growth by version
+- clear distinction between V1 and backlog
+- explicit localization strategy instead of string chaos
 
-Eso es arquitectura.  
-Lo demás, si no se controla, es entusiasmo disfrazado de diseño.
+That is architecture.  
+Everything else, if left uncontrolled, is just excitement pretending to be design.
