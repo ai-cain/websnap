@@ -81,12 +81,14 @@ A serious proposal does not promise everything at once. It versions growth.
 ### Implemented now
 
 - `--selector` in the scripted CLI path
+- `--full-page` in the scripted CLI path
 - domain validation for selector input
+- domain validation for selector/full-page incompatibility
 - browser adapter support for CSS-selector screenshot capture
+- browser adapter support for full-page screenshots
 
 ### Remaining to close `v0.2.0`
 
-- `--full-page`
 - TUI support for selector and full-page configuration
 - improved user-facing examples for the new capture modes
 

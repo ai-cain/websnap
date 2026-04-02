@@ -59,3 +59,29 @@ func TestBrowserCaptureSelectorScreenshotIntegration(t *testing.T) {
 		t.Fatal("CaptureScreenshot() returned empty data")
 	}
 }
+
+func TestBrowserCaptureFullPageScreenshotIntegration(t *testing.T) {
+	t.Parallel()
+
+	targetURL := os.Getenv("WEBSNAP_E2E_URL")
+	if targetURL == "" {
+		t.Skip("set WEBSNAP_E2E_URL to run full-page integration test")
+	}
+
+	browser := New()
+	req := domain.CaptureRequest{
+		URL:      targetURL,
+		Width:    1280,
+		Height:   720,
+		FullPage: true,
+	}
+
+	data, err := browser.CaptureScreenshot(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CaptureScreenshot() error = %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Fatal("CaptureScreenshot() returned empty data")
+	}
+}

@@ -13,6 +13,7 @@ type CaptureRequest struct {
 	Width    int64
 	Height   int64
 	Selector string
+	FullPage bool
 	Out      string
 }
 
@@ -43,6 +44,10 @@ func (r CaptureRequest) Validate() error {
 
 	if strings.TrimSpace(r.Selector) == "" && r.Selector != "" {
 		return apperrors.New(apperrors.CodeInvalidArgument, "selector cannot be only whitespace")
+	}
+
+	if strings.TrimSpace(r.Selector) != "" && r.FullPage {
+		return apperrors.New(apperrors.CodeInvalidArgument, "selector and full-page cannot be combined")
 	}
 
 	return nil

@@ -67,6 +67,7 @@ func (c ShotCommand) Run(args []string) int {
 	width := fs.Int64("width", 1440, "viewport width in pixels")
 	height := fs.Int64("height", 900, "viewport height in pixels")
 	selector := fs.String("selector", "", "CSS selector to capture instead of the viewport")
+	fullPage := fs.Bool("full-page", false, "capture the full scrollable page")
 	out := fs.String("out", "", "output path for the PNG file")
 
 	if err := fs.Parse(args[1:]); err != nil {
@@ -88,6 +89,7 @@ func (c ShotCommand) Run(args []string) int {
 		Width:    *width,
 		Height:   *height,
 		Selector: *selector,
+		FullPage: *fullPage,
 		Out:      *out,
 	}
 
@@ -103,7 +105,7 @@ func (c ShotCommand) Run(args []string) int {
 
 func (c ShotCommand) printUsage() {
 	fmt.Fprintln(c.stderr, "Usage:")
-	fmt.Fprintln(c.stderr, "  websnap shot <url> [--width <px>] [--height <px>] [--selector <css>] [--out <path>]")
+	fmt.Fprintln(c.stderr, "  websnap shot <url> [--width <px>] [--height <px>] [--selector <css>] [--full-page] [--out <path>]")
 }
 
 func renderError(w io.Writer, err error) {

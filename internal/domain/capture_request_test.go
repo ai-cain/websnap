@@ -22,6 +22,16 @@ func TestCaptureRequestValidate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid full-page request",
+			req: CaptureRequest{
+				URL:      "https://example.com",
+				Width:    1440,
+				Height:   900,
+				FullPage: true,
+			},
+			wantErr: false,
+		},
+		{
 			name: "missing URL",
 			req: CaptureRequest{
 				Width:  1440,
@@ -64,6 +74,17 @@ func TestCaptureRequestValidate(t *testing.T) {
 				Width:    1440,
 				Height:   900,
 				Selector: "   ",
+			},
+			wantErr: true,
+		},
+		{
+			name: "selector and full-page are mutually exclusive",
+			req: CaptureRequest{
+				URL:      "https://example.com",
+				Width:    1440,
+				Height:   900,
+				Selector: "#app",
+				FullPage: true,
 			},
 			wantErr: true,
 		},

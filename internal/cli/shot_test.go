@@ -85,3 +85,25 @@ func TestShotCommandRun(t *testing.T) {
 		})
 	}
 }
+
+func TestShotCommandRunFullPage(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	runner := &fakeShotRunner{
+		result: domain.CaptureResult{Path: "C:/captures/full.png"},
+	}
+
+	cmd := NewShotCommand(runner, &stdout, &stderr)
+
+	exitCode := cmd.Run([]string{"https://example.com", "--full-page"})
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+
+	if !runner.received.FullPage {
+		t.Fatal("runner should receive FullPage=true")
+	}
+}

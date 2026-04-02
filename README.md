@@ -258,21 +258,21 @@ The current TUI provides:
 websnap shot https://example.com
 websnap shot https://example.com --width 1440 --height 900
 websnap shot https://example.com --selector "#app"
+websnap shot https://example.com --full-page
 websnap shot https://example.com --out ./captures/home.png
 ```
 
-Planned next:
+Current rule:
 
-```bash
-websnap shot https://example.com --full-page
-```
+- `--selector` and `--full-page` are **mutually exclusive**
+- `v0.2.0` still needs these options in the interactive TUI flow
 
 ---
 
 ## Roadmap summary
 
 - `v0.1.0` — interactive CLI + basic screenshot ✅ completed as local milestone
-- `v0.2.0` — selector and full-page capture (selector in progress)
+- `v0.2.0` — selector and full-page capture (scripted path in progress)
 - `v0.3.0` — reproducibility and developer experience
 - `v0.4.0` — clip support and capture refinements
 - `v0.5.0` — experimental GIF pipeline

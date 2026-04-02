@@ -61,6 +61,20 @@ func TestCaptureScreenshotExecute(t *testing.T) {
 			writer:    &fakeWriter{err: errors.New("disk full")},
 			wantError: true,
 		},
+		{
+			name: "rejects incompatible selector and full-page",
+			req: domain.CaptureRequest{
+				URL:      "https://example.com",
+				Width:    1440,
+				Height:   900,
+				Selector: "#app",
+				FullPage: true,
+			},
+			baseDir:   "C:/workspace/websnap",
+			browser:   &fakeBrowser{data: []byte("png")},
+			writer:    &fakeWriter{},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {

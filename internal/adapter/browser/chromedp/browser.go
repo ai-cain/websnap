@@ -56,5 +56,9 @@ func buildCaptureAction(req domain.CaptureRequest) (*[]byte, chromedp.Action) {
 		return screenshot, chromedp.Screenshot(req.Selector, screenshot, chromedp.ByQuery)
 	}
 
+	if req.FullPage {
+		return screenshot, chromedp.FullScreenshot(screenshot, 100)
+	}
+
 	return screenshot, chromedp.CaptureScreenshot(screenshot)
 }
