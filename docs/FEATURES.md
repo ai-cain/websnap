@@ -13,7 +13,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 - Repository state: **proposal / pre-alpha**
 - Published version: **none**
-- Immediate target: **`v0.2.0`**
+- Immediate target: **`v0.3.0`**
 
 ---
 
@@ -68,7 +68,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 **Goal:** move from “basic capture” to “useful UI capture”.
 
-**Status:** In progress
+**Status:** Completed
 
 ### Scope
 
@@ -88,10 +88,12 @@ A serious proposal does not promise everything at once. It versions growth.
 - browser adapter support for CSS-selector screenshot capture
 - browser adapter support for full-page screenshots
 
-### Remaining to close `v0.2.0`
+### Delivered in `v0.2.0`
 
-- improved user-facing examples for the new capture modes
-- more descriptive selector-related failures
+- `--selector` and `--full-page` in the scripted CLI path
+- selector and full-page support in the interactive TUI
+- validation for mutually exclusive capture modes
+- mode-aware browser error messages for selector/full-page failures
 
 ### Main risk
 

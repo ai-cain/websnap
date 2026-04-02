@@ -8,9 +8,9 @@
 
 | Field | Status |
 | --- | --- |
-| Current phase | Bootstrap complete / ready for `v0.2.0` |
+| Current phase | Capture targets complete / ready for `v0.3.0` |
 | Published release | None |
-| Immediate target | `v0.2.0` |
+| Immediate target | `v0.3.0` |
 | Base stack | **Go + chromedp + Bubble Tea** |
 | Documentation language | English-first |
 | CLI i18n | Deferred to an advanced version |
@@ -267,14 +267,13 @@ websnap shot https://example.com --out ./captures/home.png
 Current rule:
 
 - `--selector` and `--full-page` are **mutually exclusive**
-- `v0.2.0` still needs these options in the interactive TUI flow
 
 ---
 
 ## Roadmap summary
 
 - `v0.1.0` — interactive CLI + basic screenshot ✅ completed as local milestone
-- `v0.2.0` — selector and full-page capture (scripted path in progress)
+- `v0.2.0` — selector and full-page capture ✅ completed as local milestone
 - `v0.3.0` — reproducibility and developer experience
 - `v0.4.0` — clip support and capture refinements
 - `v0.5.0` — experimental GIF pipeline
