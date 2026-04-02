@@ -126,6 +126,20 @@ If it enters too early, the screenshot path gets polluted from day one.
 
 ---
 
+### ADR-005 — Use a dedicated TUI layer for the interactive experience
+
+**Decision:** implement the human-facing interactive flow with Bubble Tea, Bubbles, and Lip Gloss.
+
+**Why:**
+
+- the project needs a polished terminal UX for demos and interviews
+- scripted mode and interactive mode can share the same orchestrator
+- presentation concerns stay isolated from capture logic
+
+**Rule:** the TUI collects input and renders states, but it must not own browser or filesystem logic.
+
+---
+
 ## 6. Proposed code structure
 
 ```text
@@ -136,9 +150,15 @@ cmd/
 internal/
   cli/
     interactive.go
-    prompt.go
     root.go
     shot.go
+
+  tui/
+    model.go
+    update.go
+    view.go
+    styles.go
+    run.go
 
   domain/
     capture_request.go
@@ -175,6 +195,7 @@ Future additions such as `internal/i18n/` should appear only when `v1.1.0` actua
 Because it cleanly separates:
 
 - **entry points** (`cli`) for scripted and interactive flows
+- **terminal presentation** (`tui`) for the polished experience
 - **business intent** (`domain`)
 - **coordination** (`orchestrator`)
 - **ports** (`port`)

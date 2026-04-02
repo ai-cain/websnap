@@ -34,7 +34,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 ### Implemented now
 
-- interactive terminal mode
+- styled interactive terminal mode
 - `websnap shot <url>`
 - URL validation
 - configurable viewport:

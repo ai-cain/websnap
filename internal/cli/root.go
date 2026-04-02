@@ -11,6 +11,7 @@ type App struct {
 	stdin      io.Reader
 	stdout     io.Writer
 	stderr     io.Writer
+	ui         interactiveUI
 }
 
 func NewApp(shotRunner ShotRunner, stdout, stderr io.Writer) App {
@@ -18,6 +19,15 @@ func NewApp(shotRunner ShotRunner, stdout, stderr io.Writer) App {
 }
 
 func NewAppWithInput(shotRunner ShotRunner, stdin io.Reader, stdout, stderr io.Writer) App {
+	return newAppWithDeps(shotRunner, stdin, stdout, stderr, newTUIBridge())
+}
+
+func newAppWithDeps(
+	shotRunner ShotRunner,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+	ui interactiveUI,
+) App {
 	if stdin == nil {
 		stdin = strings.NewReader("")
 	}
@@ -35,12 +45,13 @@ func NewAppWithInput(shotRunner ShotRunner, stdin io.Reader, stdout, stderr io.W
 		stdin:      stdin,
 		stdout:     stdout,
 		stderr:     stderr,
+		ui:         ui,
 	}
 }
 
 func (a App) Run(args []string) int {
 	if len(args) == 0 {
-		cmd := NewInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr)
+		cmd := newInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr, a.ui)
 		return cmd.Run()
 	}
 
@@ -49,7 +60,7 @@ func (a App) Run(args []string) int {
 		a.printUsage()
 		return 0
 	case "interactive":
-		cmd := NewInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr)
+		cmd := newInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr, a.ui)
 		return cmd.Run()
 	case "shot":
 		cmd := NewShotCommand(a.shotRunner, a.stdout, a.stderr)

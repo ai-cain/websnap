@@ -11,7 +11,7 @@
 | Current phase | Bootstrap / `v0.1.0` in progress |
 | Published release | None |
 | Immediate target | `v0.1.0` |
-| Base stack | **Go + chromedp** |
+| Base stack | **Go + chromedp + Bubble Tea** |
 | Documentation language | English-first |
 | CLI i18n | Deferred to an advanced version |
 
@@ -61,7 +61,7 @@ The first useful release should stay small but serious: **stable screenshot capt
 
 ### Committed scope for `v0.1.0`
 
-- interactive terminal mode
+- styled interactive terminal mode
 - `shot` command
 - URL-based capture
 - configurable viewport via `--width` and `--height`
@@ -94,6 +94,7 @@ Initial technical direction:
 
 - **Language:** Go
 - **Browser engine:** `chromedp`
+- **Interactive terminal UI:** Bubble Tea + Bubbles + Lip Gloss
 - **Future GIF processing:** FFmpeg, but outside `v0.1.0`
 
 ---
@@ -122,6 +123,7 @@ media/
 At the moment, this repository contains:
 
 - an initial Go CLI bootstrap
+- a styled interactive TUI flow
 - the `shot` orchestration path
 - `chromedp` browser integration
 - filesystem output persistence
@@ -241,12 +243,14 @@ websnap
 websnap interactive
 ```
 
-The wizard currently asks for:
+The current TUI provides:
 
 - URL
 - width
 - height
 - output path (optional)
+- keyboard-first navigation
+- styled panels, focus states, and capture feedback
 
 ### Scripted mode
 
