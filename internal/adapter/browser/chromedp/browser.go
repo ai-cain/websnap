@@ -39,7 +39,7 @@ func (b *Browser) CaptureScreenshot(ctx context.Context, req domain.CaptureReque
 	tasks = append(tasks, captureAction)
 
 	if err := chromedp.Run(taskCtx, tasks); err != nil {
-		return nil, apperrors.Wrap(apperrors.CodeBrowserFailed, "failed to render page in a headless browser", err)
+		return nil, apperrors.Wrap(apperrors.CodeBrowserFailed, captureFailureMessage(req), err)
 	}
 
 	if len(*screenshot) == 0 {
@@ -61,4 +61,16 @@ func buildCaptureAction(req domain.CaptureRequest) (*[]byte, chromedp.Action) {
 	}
 
 	return screenshot, chromedp.CaptureScreenshot(screenshot)
+}
+
+func captureFailureMessage(req domain.CaptureRequest) string {
+	if strings.TrimSpace(req.Selector) != "" {
+		return "failed to capture the requested selector"
+	}
+
+	if req.FullPage {
+		return "failed to capture the full page"
+	}
+
+	return "failed to render page in a headless browser"
 }
