@@ -2,8 +2,10 @@ package tui
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/ai-cain/websnap/internal/domain"
+	apperrors "github.com/ai-cain/websnap/internal/support/errors"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +15,8 @@ const (
 	fieldURL = iota
 	fieldWidth
 	fieldHeight
+	fieldMode
+	fieldSelector
 	fieldOut
 )
 
@@ -28,6 +32,7 @@ type Model struct {
 	runner     ShotRunner
 	inputs     []textinput.Model
 	focus      int
+	mode       captureMode
 	phase      phase
 	spinner    spinner.Model
 	styles     styles
@@ -45,6 +50,7 @@ func NewModel(runner ShotRunner) Model {
 		newInput("https://example.com", "", s),
 		newInput("", "1440", s),
 		newInput("", "900", s),
+		newInput(".hero", "", s),
 		newInput("./captures/home.png", "", s),
 	}
 
@@ -55,11 +61,12 @@ func NewModel(runner ShotRunner) Model {
 	model := Model{
 		runner:  runner,
 		inputs:  inputs,
+		mode:    modeViewport,
 		spinner: spin,
 		styles:  s,
 	}
 
-	model.setFocus(0)
+	model.setFocus(fieldURL)
 	return model
 }
 
@@ -68,38 +75,53 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) buildRequest() (domain.CaptureRequest, error) {
-	width, err := strconv.ParseInt(m.inputs[fieldWidth].Value(), 10, 64)
+	width, err := strconv.ParseInt(m.inputs[inputIndex(fieldWidth)].Value(), 10, 64)
 	if err != nil {
 		return domain.CaptureRequest{}, err
 	}
 
-	height, err := strconv.ParseInt(m.inputs[fieldHeight].Value(), 10, 64)
+	height, err := strconv.ParseInt(m.inputs[inputIndex(fieldHeight)].Value(), 10, 64)
 	if err != nil {
 		return domain.CaptureRequest{}, err
 	}
 
 	req := domain.CaptureRequest{
-		URL:    m.inputs[fieldURL].Value(),
+		URL:    m.inputs[inputIndex(fieldURL)].Value(),
 		Width:  width,
 		Height: height,
-		Out:    m.inputs[fieldOut].Value(),
+		Out:    m.inputs[inputIndex(fieldOut)].Value(),
+	}
+
+	switch m.mode {
+	case modeSelector:
+		req.Selector = m.inputs[inputIndex(fieldSelector)].Value()
+		if strings.TrimSpace(req.Selector) == "" {
+			return domain.CaptureRequest{}, apperrors.New(apperrors.CodeInvalidArgument, "selector is required in selector mode")
+		}
+	case modeFullPage:
+		req.FullPage = true
 	}
 
 	return req, req.Validate()
 }
 
-func (m *Model) setFocus(index int) {
-	m.focus = index
+func (m *Model) setFocus(field int) {
+	m.focus = field
 
-	for i := range m.inputs {
-		if i == index {
-			m.inputs[i].Focus()
-			m.inputs[i].PromptStyle = m.styles.focusedPrompt
+	for current := fieldURL; current <= fieldOut; current++ {
+		idx := inputIndex(current)
+		if idx < 0 {
 			continue
 		}
 
-		m.inputs[i].Blur()
-		m.inputs[i].PromptStyle = m.styles.muted
+		if current == field {
+			m.inputs[idx].Focus()
+			m.inputs[idx].PromptStyle = m.styles.focusedPrompt
+			continue
+		}
+
+		m.inputs[idx].Blur()
+		m.inputs[idx].PromptStyle = m.styles.muted
 	}
 }
 
@@ -121,4 +143,21 @@ func newInput(placeholder, value string, s styles) textinput.Model {
 	input.TextStyle = s.text
 	input.PlaceholderStyle = s.muted
 	return input
+}
+
+func inputIndex(field int) int {
+	switch field {
+	case fieldURL:
+		return 0
+	case fieldWidth:
+		return 1
+	case fieldHeight:
+		return 2
+	case fieldSelector:
+		return 3
+	case fieldOut:
+		return 4
+	default:
+		return -1
+	}
 }

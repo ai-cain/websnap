@@ -82,6 +82,7 @@ A serious proposal does not promise everything at once. It versions growth.
 
 - `--selector` in the scripted CLI path
 - `--full-page` in the scripted CLI path
+- selector and full-page support in the interactive TUI
 - domain validation for selector input
 - domain validation for selector/full-page incompatibility
 - browser adapter support for CSS-selector screenshot capture
@@ -89,8 +90,8 @@ A serious proposal does not promise everything at once. It versions growth.
 
 ### Remaining to close `v0.2.0`
 
-- TUI support for selector and full-page configuration
 - improved user-facing examples for the new capture modes
+- more descriptive selector-related failures
 
 ### Main risk
 

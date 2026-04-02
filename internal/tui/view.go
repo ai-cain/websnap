@@ -11,6 +11,8 @@ var fieldLabels = []string{
 	"Target URL",
 	"Viewport width",
 	"Viewport height",
+	"Capture mode",
+	"Selector",
 	"Output path",
 }
 
@@ -60,20 +62,26 @@ func (m Model) renderBody() string {
 }
 
 func (m Model) renderForm() string {
-	blocks := make([]string, 0, len(m.inputs))
-	for i := range m.inputs {
-		field := lipgloss.JoinVertical(
+	blocks := make([]string, 0, len(fieldLabels))
+	for field := range fieldLabels {
+		if field == fieldMode {
+			blocks = append(blocks, m.renderModeField(field))
+			continue
+		}
+
+		idx := inputIndex(field)
+		content := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.styles.label.Render(fieldLabels[i]),
-			m.inputs[i].View(),
+			m.styles.label.Render(fieldLabels[field]),
+			m.renderFieldValue(field, idx),
 		)
 
 		style := m.styles.field
-		if i == m.focus {
+		if field == m.focus {
 			style = m.styles.fieldFocused
 		}
 
-		blocks = append(blocks, style.Render(field))
+		blocks = append(blocks, style.Render(content))
 	}
 
 	return m.styles.panel.Render(lipgloss.JoinVertical(lipgloss.Left, blocks...))
@@ -82,7 +90,7 @@ func (m Model) renderForm() string {
 func (m Model) renderStatus() string {
 	if m.lastErr == nil {
 		return m.styles.panel.Render(
-			m.styles.muted.Render("Tab / Shift+Tab to move • Enter to continue • Ctrl+C to quit"),
+			m.styles.muted.Render("Tab to move • ←/→ change mode • Enter to continue • Ctrl+C to quit"),
 		)
 	}
 
@@ -101,11 +109,46 @@ func (m Model) renderFooter() string {
 		m.styles.muted.Render("confirm"),
 		m.styles.shortcut.Render("Tab"),
 		m.styles.muted.Render("next field"),
+		m.styles.shortcut.Render("←/→"),
+		m.styles.muted.Render("change mode"),
 		m.styles.shortcut.Render("Ctrl+C"),
 		m.styles.muted.Render("quit"),
 	}
 
 	return m.styles.footer.Render(strings.Join(parts, "   "))
+}
+
+func (m Model) renderModeField(field int) string {
+	options := make([]string, 0, len(captureModes))
+	for _, option := range captureModes {
+		style := m.styles.muted
+		if option == m.mode {
+			style = m.styles.accent.Bold(true)
+		}
+
+		options = append(options, style.Render(option.label()))
+	}
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.styles.label.Render(fieldLabels[field]),
+		strings.Join(options, "   "),
+	)
+
+	style := m.styles.field
+	if field == m.focus {
+		style = m.styles.fieldFocused
+	}
+
+	return style.Render(content)
+}
+
+func (m Model) renderFieldValue(field, idx int) string {
+	if field == fieldSelector && m.mode != modeSelector {
+		return m.styles.muted.Render("Used only in selector mode")
+	}
+
+	return m.inputs[idx].View()
 }
 
 func contentWidth(total int) int {

@@ -60,11 +60,21 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab", "shift+tab", "up", "down":
 		m.moveFocus(msg.String())
 		return m, nil
+	case "left", "h":
+		if m.focus == fieldMode {
+			m.mode = m.mode.previous()
+			return m, nil
+		}
+	case "right", "l":
+		if m.focus == fieldMode {
+			m.mode = m.mode.next()
+			return m, nil
+		}
 	case "enter":
 		return m.submitOrAdvance()
-	default:
-		return m.updateFocusedInput(msg)
 	}
+
+	return m.updateFocusedInput(msg)
 }
 
 func (m *Model) moveFocus(key string) {
@@ -75,20 +85,28 @@ func (m *Model) moveFocus(key string) {
 		next++
 	}
 
-	if next < 0 {
-		next = len(m.inputs) - 1
-	}
+	next = m.normalizeField(next)
+	for !m.isFocusableField(next) {
+		if key == "shift+tab" || key == "up" {
+			next = m.normalizeField(next - 1)
+			continue
+		}
 
-	if next >= len(m.inputs) {
-		next = 0
+		next = m.normalizeField(next + 1)
 	}
 
 	m.setFocus(next)
 }
 
 func (m Model) submitOrAdvance() (tea.Model, tea.Cmd) {
-	if m.focus < len(m.inputs)-1 {
-		m.setFocus(m.focus + 1)
+	if m.focus < fieldOut {
+		next := m.focus + 1
+		next = m.normalizeField(next)
+		for !m.isFocusableField(next) {
+			next = m.normalizeField(next + 1)
+		}
+
+		m.setFocus(next)
 		return m, nil
 	}
 
@@ -108,9 +126,34 @@ func (m Model) updateFocusedInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	idx := inputIndex(m.focus)
+	if idx < 0 {
+		return m, nil
+	}
+
 	var cmd tea.Cmd
-	m.inputs[m.focus], cmd = m.inputs[m.focus].Update(msg)
+	m.inputs[idx], cmd = m.inputs[idx].Update(msg)
 	return m, cmd
+}
+
+func (m Model) isFocusableField(field int) bool {
+	if field != fieldSelector {
+		return true
+	}
+
+	return m.mode == modeSelector
+}
+
+func (m Model) normalizeField(field int) int {
+	if field < fieldURL {
+		return fieldOut
+	}
+
+	if field > fieldOut {
+		return fieldURL
+	}
+
+	return field
 }
 
 func friendlyInputError(err error) error {

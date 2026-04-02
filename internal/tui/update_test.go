@@ -20,6 +20,25 @@ func TestModelTabMovesFocus(t *testing.T) {
 	}
 }
 
+func TestModelCanCycleCaptureMode(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeShotRunner{})
+	model.setFocus(fieldMode)
+
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyRight})
+	selector := next.(Model)
+	if selector.mode != modeSelector {
+		t.Fatalf("mode = %v, want %v", selector.mode, modeSelector)
+	}
+
+	next, _ = selector.Update(tea.KeyMsg{Type: tea.KeyRight})
+	fullPage := next.(Model)
+	if fullPage.mode != modeFullPage {
+		t.Fatalf("mode = %v, want %v", fullPage.mode, modeFullPage)
+	}
+}
+
 func TestModelEnterOnLastFieldTransitionsToSuccess(t *testing.T) {
 	t.Parallel()
 
@@ -28,10 +47,10 @@ func TestModelEnterOnLastFieldTransitionsToSuccess(t *testing.T) {
 	}
 
 	model := NewModel(runner)
-	model.inputs[fieldURL].SetValue("https://example.com")
-	model.inputs[fieldWidth].SetValue("1440")
-	model.inputs[fieldHeight].SetValue("900")
-	model.inputs[fieldOut].SetValue("captures/home.png")
+	model.inputs[inputIndex(fieldURL)].SetValue("https://example.com")
+	model.inputs[inputIndex(fieldWidth)].SetValue("1440")
+	model.inputs[inputIndex(fieldHeight)].SetValue("900")
+	model.inputs[inputIndex(fieldOut)].SetValue("captures/home.png")
 	model.setFocus(fieldOut)
 
 	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})

@@ -248,6 +248,8 @@ The current TUI provides:
 - URL
 - width
 - height
+- capture mode selection: viewport / selector / full-page
+- selector input when selector mode is active
 - output path (optional)
 - keyboard-first navigation
 - styled panels, focus states, and capture feedback
