@@ -1,248 +1,191 @@
-# 🚀 websnap
+# websnap
 
-> Fast CLI tool to capture screenshots and GIFs from web pages or specific elements — anywhere, anytime.
-
----
-
-## ✨ Descripción
-
-**websnap** es una herramienta CLI pensada para desarrolladores que necesitan capturar rápidamente:
-
-* 📸 Screenshots de páginas web o elementos específicos
-* 🎞️ GIFs cortos de animaciones o interacciones
-* 📂 Salida automática organizada (`media/img`, `media/gif`)
-
-Todo desde cualquier ruta del sistema, sin depender de abrir herramientas externas o grabar manualmente.
+> Propuesta de CLI en Go para capturas reproducibles de interfaces web desde terminal.
 
 ---
 
-## ⚡ Características
+## Estado del proyecto
 
-* CLI rápida y simple
-* Funciona desde cualquier carpeta
-* Captura por:
+| Campo | Estado |
+| --- | --- |
+| Fase actual | Proposal / pre-alpha |
+| Release publicado | Ninguno |
+| Próximo objetivo | `v0.1.0` |
+| Stack base elegido | **Go + chromedp** |
+| Estado de GIF | Diferido a versiones posteriores |
 
-  * URL completa
-  * Selector CSS (`--selector`)
-  * Área específica (`--clip`)
-* Generación de GIFs automáticos
-* Estructura de salida automática:
-
-  ```
-  media/
-    ├── img/
-    └── gif/
-  ```
-* Soporte headless (sin UI del navegador)
-* Preparado para automatización (scripts, CI, etc.)
+> **Importante:** este repositorio todavía **no contiene una implementación ejecutable**.  
+> Este README describe la propuesta, el alcance de la primera versión y la dirección arquitectónica.
 
 ---
 
-## 🛠️ Stack (propuesto)
+## Qué problema resuelve
 
-* Lenguaje: **Go** (binario ejecutable)
-* Browser automation:
+`websnap` busca resolver un problema concreto: **capturar interfaces web de forma reproducible, rápida y scriptable**, sin depender de abrir herramientas manuales ni repetir el mismo flujo visual una y otra vez.
 
-  * `chromedp` (simple y nativo)
-  * o `playwright-go` (más avanzado)
-* GIF processing: **FFmpeg**
+Casos típicos:
 
----
-
-## 📦 Instalación
-
-### Opción 1: Binario (recomendado)
-
-Descarga el ejecutable desde releases:
-
-```bash
-# Linux / Mac
-chmod +x websnap
-sudo mv websnap /usr/local/bin/
-
-# Windows
-# Agrega websnap.exe a tu PATH
-```
+- documentar componentes o pantallas
+- generar evidencia visual en revisiones
+- capturar vistas locales (`localhost`) o remotas
+- preparar material para demos, PRs y portafolio
+- automatizar capturas desde scripts o CI
 
 ---
 
-### Opción 2: Compilar
+## La pregunta importante: ¿cómo una CLI toma una captura si vive en terminal?
 
-```bash
-git clone https://github.com/tu-user/websnap.git
-cd websnap
+La terminal **no renderiza la web**. Lo que hace la CLI es **orquestar un navegador headless**.
 
-go build -o websnap ./cmd/websnap
-```
+Flujo propuesto:
+
+1. El usuario ejecuta `websnap shot <url>`.
+2. La CLI parsea argumentos y valida la entrada.
+3. La CLI abre un navegador Chromium en modo headless.
+4. El navegador carga la URL y renderiza la interfaz fuera de pantalla.
+5. La CLI le pide al navegador capturar:
+   - viewport actual
+   - página completa
+   - o un elemento por selector
+6. La CLI guarda el PNG en disco y devuelve la ruta generada.
+
+En resumen: **la terminal no “toma la foto”**; la CLI **dirige** a un navegador headless para que la tome.
 
 ---
 
-## 🚀 Uso
+## Objetivo del primer release
 
-### Screenshot básico
+El primer release útil apunta a una V1 pequeña pero seria: **captura de screenshots estable**.
+
+### Alcance comprometido para `v0.1.0`
+
+- comando `shot`
+- captura desde URL
+- configuración de viewport (`--width`, `--height`)
+- ruta de salida explícita con `--out`
+- creación automática de `media/img`
+- mensajes de error claros
+- contrato CLI simple y defendible
+
+### Fuera de alcance para `v0.1.0`
+
+- GIF
+- video
+- watch mode
+- uploads a servicios externos
+- archivo de configuración
+- autenticación compleja
+- automatizaciones avanzadas tipo test runner
+
+---
+
+## CLI objetivo de la propuesta
+
+> Sintaxis objetivo. **Todavía no implementada**.
 
 ```bash
 websnap shot https://example.com
+websnap shot https://example.com --width 1440 --height 900
+websnap shot https://example.com --out ./captures/home.png
 ```
 
-Salida:
-
-```
-./media/img/screenshot-<timestamp>.png
-```
-
----
-
-### Screenshot de un elemento
+Capacidades previstas inmediatamente después del bootstrap inicial:
 
 ```bash
-websnap shot https://example.com --selector "#app"
+websnap shot https://example.com --selector ".hero"
+websnap shot https://example.com --full-page
 ```
 
 ---
 
-### Screenshot con área específica
+## Por qué Go
 
-```bash
-websnap shot https://example.com --clip 0,0,1280,720
-```
+Se elige **Go** por razones de producto y distribución, no por moda:
 
----
+- binario único y fácil de distribuir
+- buena experiencia para CLI y automatización
+- menor fricción en CI
+- arranque rápido y mantenimiento simple
+- base sólida para crecer sin cargar el proyecto con tooling innecesario
 
-### Generar GIF
+Para la primera etapa, la decisión propuesta es:
 
-```bash
-websnap gif https://example.com
-```
-
-Salida:
-
-```
-./media/gif/animation-<timestamp>.gif
-```
+- **Lenguaje:** Go
+- **Motor de navegador:** `chromedp`
+- **Procesamiento de GIF a futuro:** FFmpeg, pero fuera de `v0.1.0`
 
 ---
 
-### GIF de un elemento
+## Estructura de salida propuesta
 
-```bash
-websnap gif https://example.com --selector ".card"
-```
+La herramienta creará la salida en la **ruta desde la que se ejecute el comando**, no dentro del repositorio:
 
----
-
-## ⚙️ Flags disponibles
-
-| Flag          | Descripción                    |
-| ------------- | ------------------------------ |
-| `--selector`  | Captura un elemento específico |
-| `--clip`      | Área: `x,y,width,height`       |
-| `--full-page` | Captura toda la página         |
-| `--width`     | Ancho viewport                 |
-| `--height`    | Alto viewport                  |
-| `--delay`     | Espera antes de capturar       |
-| `--duration`  | Duración del GIF               |
-| `--fps`       | Frames por segundo             |
-| `--out`       | Ruta de salida personalizada   |
-| `--name`      | Nombre del archivo             |
-
----
-
-## 📁 Estructura de salida
-
-websnap crea automáticamente:
-
-```
+```text
 media/
-  ├── img/   # screenshots
-  └── gif/   # gifs
+  └── img/
 ```
 
-✔ Se crea en la **ruta donde ejecutas el comando**, no en el repo.
+Versiones futuras podrían sumar:
 
----
-
-## 🧠 Cómo funciona
-
-### Screenshot
-
-1. Abre navegador headless
-2. Carga la URL
-3. Espera render
-4. Captura página o elemento
-5. Guarda en `media/img/`
-
----
-
-### GIF
-
-1. Abre navegador
-2. Espera (`--delay`)
-3. Captura múltiples frames
-4. Genera GIF usando FFmpeg
-5. Guarda en `media/gif/`
-
----
-
-## 📌 Ejemplos reales
-
-```bash
-# Capturar landing local
-websnap shot http://localhost:3000
-
-# Capturar componente específico
-websnap shot http://localhost:3000 --selector ".hero"
-
-# Crear gif de animación
-websnap gif http://localhost:3000 --duration 3s --fps 12
-
-# Capturar área específica
-websnap shot http://localhost:3000 --clip 0,0,1920,1080
+```text
+media/
+  ├── img/
+  └── gif/
 ```
 
 ---
 
-## 🧩 Roadmap
+## Estado real del repositorio hoy
 
-* [ ] Video (mp4/webm)
-* [ ] Config file (`.websnap.yaml`)
-* [ ] Modo watch
-* [ ] Upload automático (S3, Cloudinary)
-* [ ] UI minimal opcional
+Hoy este repositorio contiene la **documentación base de la propuesta**:
 
----
+- definición del problema
+- alcance inicial
+- roadmap por versiones
+- arquitectura propuesta
 
-## 🏷️ Tags
+Pendiente por construir:
 
-```
-go
-cli
-screenshot
-gif
-web-capture
-browser-automation
-chromedp
-playwright
-ffmpeg
-developer-tools
-```
+- módulo Go
+- comando `websnap`
+- caso de uso `shot`
+- adaptador `chromedp`
+- manejo de salida a disco
+- validación de flags y errores
 
 ---
 
-## 📄 Licencia
+## Documentación del proyecto
 
-MIT
+- [`docs/README.md`](docs/README.md) — índice documental
+- [`docs/FEATURES.md`](docs/FEATURES.md) — roadmap por versiones
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — arquitectura propuesta en Go
 
 ---
 
-## 💡 Nombre del repo
+## Roadmap resumido
 
-👉 **websnap** (recomendado)
+- `v0.1.0` — bootstrap del CLI + captura básica
+- `v0.2.0` — selector y full-page
+- `v0.3.0` — mejoras de reproducibilidad y DX
+- `v0.4.0` — clip y refinamientos de captura
+- `v0.5.0` — GIF experimental
+- `v1.0.0` — release estable
 
-Alternativas:
+El detalle fino vive en [`docs/FEATURES.md`](docs/FEATURES.md).
 
-* snapgif
-* pagecap
-* clipshot
-* framegrab
+---
 
+## Principios de diseño
+
+- **reproducibilidad sobre magia**
+- **una V1 pequeña, pero sólida**
+- **contrato CLI simple**
+- **separar screenshots de GIF para no contaminar el diseño**
+- **arquitectura extensible sin sobreingeniería**
+
+---
+
+## Licencia
+
+Pendiente de definir formalmente en archivo `LICENSE`.
