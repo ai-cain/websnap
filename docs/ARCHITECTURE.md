@@ -44,6 +44,7 @@ flowchart LR
 ## 3. Architectural goals
 
 - keep the CLI simple for users
+- support both scripted and interactive terminal entrypoints
 - isolate browser technology from the core orchestration
 - keep the domain small and explicit
 - allow growth toward selector, clip, GIF, and i18n without breaking the main path
@@ -134,6 +135,8 @@ cmd/
 
 internal/
   cli/
+    interactive.go
+    prompt.go
     root.go
     shot.go
 
@@ -171,7 +174,7 @@ Future additions such as `internal/i18n/` should appear only when `v1.1.0` actua
 
 Because it cleanly separates:
 
-- **entry point** (`cli`)
+- **entry points** (`cli`) for scripted and interactive flows
 - **business intent** (`domain`)
 - **coordination** (`orchestrator`)
 - **ports** (`port`)

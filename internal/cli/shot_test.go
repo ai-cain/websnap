@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
@@ -81,15 +80,4 @@ func TestShotCommandRun(t *testing.T) {
 			}
 		})
 	}
-}
-
-type fakeShotRunner struct {
-	received domain.CaptureRequest
-	result   domain.CaptureResult
-	err      error
-}
-
-func (f *fakeShotRunner) Execute(_ context.Context, req domain.CaptureRequest) (domain.CaptureResult, error) {
-	f.received = req
-	return f.result, f.err
 }

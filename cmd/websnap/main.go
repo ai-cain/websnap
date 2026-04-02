@@ -25,6 +25,6 @@ func main() {
 		time.Now,
 	)
 
-	app := cli.NewApp(runner, os.Stdout, os.Stderr)
+	app := cli.NewAppWithInput(runner, os.Stdin, os.Stdout, os.Stderr)
 	os.Exit(app.Run(os.Args[1:]))
 }

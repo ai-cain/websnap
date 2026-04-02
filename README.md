@@ -61,6 +61,7 @@ The first useful release should stay small but serious: **stable screenshot capt
 
 ### Committed scope for `v0.1.0`
 
+- interactive terminal mode
 - `shot` command
 - URL-based capture
 - configurable viewport via `--width` and `--height`
@@ -78,27 +79,6 @@ The first useful release should stay small but serious: **stable screenshot capt
 - config file
 - advanced authentication
 - test-runner-like automation
-
----
-
-## Current bootstrap commands
-
-Already implemented in the current bootstrap:
-
-```bash
-websnap shot https://example.com
-websnap shot https://example.com --width 1440 --height 900
-websnap shot https://example.com --out ./captures/home.png
-```
-
-Planned next:
-
-```bash
-websnap shot https://example.com --selector ".hero"
-websnap shot https://example.com --full-page
-```
-
----
 
 ## Why Go
 
@@ -166,9 +146,128 @@ Still to be built:
 
 ---
 
+## Installation and update
+
+### Requirements
+
+- Go `1.26+`
+- Chrome or Chromium available on the machine
+
+### Option A — run from the repository without installing
+
+Useful while the project is still in bootstrap mode:
+
+```bash
+go run ./cmd/websnap
+go run ./cmd/websnap shot https://example.com
+```
+
+### Option B — install from local source
+
+From the repository root:
+
+```bash
+go install ./cmd/websnap
+```
+
+After that, ensure Go's binary directory is on your `PATH`.
+
+Windows check:
+
+```powershell
+go env GOPATH
+```
+
+Then make sure this folder is reachable from the terminal:
+
+```text
+%GOPATH%\bin
+```
+
+If it is not in `PATH`, PowerShell will show:
+
+```text
+websnap : The term 'websnap' is not recognized ...
+```
+
+### Option C — install directly from GitHub
+
+For public usage from the repository path:
+
+```bash
+go install github.com/ai-cain/websnap/cmd/websnap@latest
+```
+
+### Update to a newer version
+
+If you installed through `go install`, update by reinstalling the target version:
+
+```bash
+go install github.com/ai-cain/websnap/cmd/websnap@latest
+```
+
+When tagged releases exist, install a fixed version explicitly:
+
+```bash
+go install github.com/ai-cain/websnap/cmd/websnap@v0.1.0
+```
+
+### Verify the Go toolchain correctly
+
+Use:
+
+```bash
+go version
+```
+
+Not:
+
+```bash
+go --version
+```
+
+Go uses subcommands, not GNU-style long flags for version output.
+
+---
+
+## Current bootstrap commands
+
+### Interactive mode
+
+Launch the interactive terminal flow:
+
+```bash
+websnap
+websnap interactive
+```
+
+The wizard currently asks for:
+
+- URL
+- width
+- height
+- output path (optional)
+
+### Scripted mode
+
+```bash
+websnap shot https://example.com
+websnap shot https://example.com --width 1440 --height 900
+websnap shot https://example.com --out ./captures/home.png
+```
+
+Planned next:
+
+```bash
+websnap shot https://example.com --selector ".hero"
+websnap shot https://example.com --full-page
+```
+
+---
+
 ## Roadmap summary
 
-- `v0.1.0` — CLI bootstrap + basic screenshot
+- `v0.1.0` — interactive CLI + basic screenshot
 - `v0.2.0` — selector and full-page capture
 - `v0.3.0` — reproducibility and developer experience
 - `v0.4.0` — clip support and capture refinements
