@@ -1,4 +1,4 @@
-﻿package tui
+package tui
 
 import (
 	"github.com/ai-cain/websnap/internal/domain"
@@ -22,25 +22,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 	case targetsLoadedMsg:
-		m.enterTargetSelection()
+		m.enterGroupSelection()
 		if msg.err != nil {
 			m.lastErr = msg.err
-			m.targets = nil
-			m.targetIndex = 0
+			m.groups = nil
+			m.groupIndex = 0
 			return m, nil
 		}
 
-		m.targets = nil
-		for _, target := range msg.targets {
-			m.targets = append(m.targets, newLiveTargetMenuItem(target))
-		}
-		m.targetIndex = 0
+		m.groups = buildGroupMenuItems(msg.targets)
+		m.groupIndex = 0
 		return m, nil
 	case tabsLoadedMsg:
 		m.phase = phaseEditing
 		if msg.err != nil {
 			m.lastErr = msg.err
-			m.enterTargetSelection()
+			m.enterTargetSelection(m.selectedGroup)
 			return m, nil
 		}
 
@@ -91,6 +88,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.screen {
+	case screenGroupSelect:
+		return m.handleGroupSelectionKey(msg)
 	case screenTargetSelect:
 		return m.handleTargetSelectionKey(msg)
 	case screenTabSelect:
@@ -102,12 +101,32 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m Model) handleTargetSelectionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleGroupSelectionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "esc":
 		return m, tea.Quit
 	case "r":
 		return m.reloadTargets()
+	case "up", "k", "shift+tab":
+		m.moveGroupSelection(-1)
+		return m, nil
+	case "down", "j", "tab":
+		m.moveGroupSelection(1)
+		return m, nil
+	case "enter":
+		return m.selectCurrentGroup()
+	default:
+		return m, nil
+	}
+}
+
+func (m Model) handleTargetSelectionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc":
+		m.enterGroupSelection()
+		return m, nil
 	case "up", "k", "shift+tab":
 		m.moveTargetSelection(-1)
 		return m, nil
@@ -126,7 +145,7 @@ func (m Model) handleTabSelectionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		m.enterTargetSelection()
+		m.enterTargetSelection(m.selectedGroup)
 		return m, nil
 	case "up", "k", "shift+tab":
 		m.moveTabSelection(-1)
@@ -156,7 +175,7 @@ func (m Model) handleLiveOptionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.enterTabSelection(m.tabs)
 			return m, nil
 		}
-		m.enterTargetSelection()
+		m.enterTargetSelection(m.selectedGroup)
 		return m, nil
 	case "enter":
 		req, err := m.buildLiveRequest()
@@ -168,6 +187,20 @@ func (m Model) handleLiveOptionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.submitLiveCapture(req)
 	default:
 		return m.updateFocusedInput(msg)
+	}
+}
+
+func (m *Model) moveGroupSelection(delta int) {
+	if len(m.groups) == 0 {
+		return
+	}
+
+	m.groupIndex += delta
+	if m.groupIndex < 0 {
+		m.groupIndex = len(m.groups) - 1
+	}
+	if m.groupIndex >= len(m.groups) {
+		m.groupIndex = 0
 	}
 }
 
@@ -197,6 +230,20 @@ func (m *Model) moveTabSelection(delta int) {
 	if m.tabIndex >= len(m.tabs) {
 		m.tabIndex = 0
 	}
+}
+
+func (m Model) selectCurrentGroup() (tea.Model, tea.Cmd) {
+	if len(m.groups) == 0 {
+		return m, nil
+	}
+
+	group := m.groups[m.groupIndex]
+	m.lastErr = nil
+	m.tabs = nil
+	m.tabIndex = 0
+	m.hasSelectedTab = false
+	m.enterTargetSelection(group)
+	return m, nil
 }
 
 func (m Model) selectCurrentTarget() (tea.Model, tea.Cmd) {
@@ -235,11 +282,7 @@ func (m Model) submitLiveCapture(req domain.LiveCaptureRequest) (tea.Model, tea.
 }
 
 func (m Model) updateFocusedInput(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.phase != phaseEditing {
-		return m, nil
-	}
-
-	if m.screen != screenLiveOptions {
+	if m.phase != phaseEditing || m.screen != screenLiveOptions {
 		return m, nil
 	}
 

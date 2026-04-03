@@ -1,4 +1,4 @@
-﻿package tui
+package tui
 
 import (
 	"testing"
@@ -6,6 +6,44 @@ import (
 	"github.com/ai-cain/websnap/internal/domain"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+func TestModelSelectsGroupAndShowsTargets(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.groups = []groupMenuItem{
+		{
+			title:  "Antigravity",
+			detail: "2 ventanas • app",
+			targets: []domain.LiveTarget{
+				{
+					WindowHandle: 100,
+					Title:        "README.md - Antigravity",
+					AppName:      "antigravity",
+					Type:         domain.LiveTargetApp,
+				},
+				{
+					WindowHandle: 101,
+					Title:        "home.ts - Antigravity",
+					AppName:      "antigravity",
+					Type:         domain.LiveTargetApp,
+				},
+			},
+		},
+	}
+
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := next.(Model)
+
+	if got.screen != screenTargetSelect {
+		t.Fatalf("screen = %d, want %d", got.screen, screenTargetSelect)
+	}
+
+	if len(got.targets) != 2 {
+		t.Fatalf("len(targets) = %d, want 2", len(got.targets))
+	}
+}
 
 func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 	t.Parallel()
@@ -21,16 +59,22 @@ func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 
 	model := NewModel(studio)
 	model.phase = phaseEditing
+	model.selectedGroup = groupMenuItem{title: "Chrome", detail: "1 ventana • navegador"}
+	model.hasSelectedGroup = true
+	model.screen = screenTargetSelect
 	model.targets = []targetMenuItem{
-		newLiveTargetMenuItem(domain.LiveTarget{
-			WindowHandle: 131584,
-			Title:        "WhatsApp - Google Chrome",
-			AppName:      "chrome",
-			Type:         domain.LiveTargetBrowser,
-			CanListTabs:  true,
-		}),
+		{
+			title:  "WhatsApp - Google Chrome",
+			detail: "browser • tabs available",
+			target: domain.LiveTarget{
+				WindowHandle: 131584,
+				Title:        "WhatsApp - Google Chrome",
+				AppName:      "chrome",
+				Type:         domain.LiveTargetBrowser,
+				CanListTabs:  true,
+			},
+		},
 	}
-	model.targetIndex = 0
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	busy := next.(Model)
@@ -64,16 +108,22 @@ func TestModelSingleBrowserTabAutoAdvancesToLiveOptions(t *testing.T) {
 
 	model := NewModel(studio)
 	model.phase = phaseEditing
+	model.selectedGroup = groupMenuItem{title: "Chrome", detail: "1 ventana • navegador"}
+	model.hasSelectedGroup = true
+	model.screen = screenTargetSelect
 	model.targets = []targetMenuItem{
-		newLiveTargetMenuItem(domain.LiveTarget{
-			WindowHandle: 131584,
-			Title:        "WhatsApp - Google Chrome",
-			AppName:      "chrome",
-			Type:         domain.LiveTargetBrowser,
-			CanListTabs:  true,
-		}),
+		{
+			title:  "WhatsApp - Google Chrome",
+			detail: "browser • tabs available",
+			target: domain.LiveTarget{
+				WindowHandle: 131584,
+				Title:        "WhatsApp - Google Chrome",
+				AppName:      "chrome",
+				Type:         domain.LiveTargetBrowser,
+				CanListTabs:  true,
+			},
+		},
 	}
-	model.targetIndex = 0
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	busy := next.(Model)
@@ -104,6 +154,8 @@ func TestModelEnterOnLiveOptionsTransitionsToSuccess(t *testing.T) {
 	model := NewModel(studio)
 	model.phase = phaseEditing
 	model.screen = screenLiveOptions
+	model.selectedGroup = groupMenuItem{title: "Explorador", detail: "1 ventana • carpetas"}
+	model.hasSelectedGroup = true
 	model.selectedTarget = domain.LiveTarget{
 		WindowHandle: 1312510,
 		Title:        "portfolio - Explorador de archivos",

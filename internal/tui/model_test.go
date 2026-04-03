@@ -1,4 +1,4 @@
-﻿package tui
+package tui
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"github.com/ai-cain/websnap/internal/domain"
 )
 
-func TestNewModelStartsInTargetSelection(t *testing.T) {
+func TestNewModelStartsInGroupSelection(t *testing.T) {
 	t.Parallel()
 
 	model := NewModel(&fakeStudio{})
 
-	if model.screen != screenTargetSelect {
-		t.Fatalf("screen = %d, want %d", model.screen, screenTargetSelect)
+	if model.screen != screenGroupSelect {
+		t.Fatalf("screen = %d, want %d", model.screen, screenGroupSelect)
 	}
 
 	if model.phase != phaseBusy {
@@ -25,7 +25,7 @@ func TestNewModelStartsInTargetSelection(t *testing.T) {
 	}
 }
 
-func TestModelLoadsTargetsIntoMenu(t *testing.T) {
+func TestModelLoadsTargetsIntoGroups(t *testing.T) {
 	t.Parallel()
 
 	model := NewModel(&fakeStudio{})
@@ -33,17 +33,23 @@ func TestModelLoadsTargetsIntoMenu(t *testing.T) {
 	next, _ := model.Update(targetsLoadedMsg{
 		targets: []domain.LiveTarget{
 			{
-				WindowHandle: 131584,
-				Title:        "WhatsApp - Google Chrome",
+				WindowHandle: 100,
+				Title:        "README.md - Antigravity",
+				AppName:      "antigravity",
+				Type:         domain.LiveTargetApp,
+			},
+			{
+				WindowHandle: 101,
+				Title:        "home.ts - Antigravity",
+				AppName:      "antigravity",
+				Type:         domain.LiveTargetApp,
+			},
+			{
+				WindowHandle: 200,
+				Title:        "Your Repositories - Google Chrome",
 				AppName:      "chrome",
 				Type:         domain.LiveTargetBrowser,
 				CanListTabs:  true,
-			},
-			{
-				WindowHandle: 1312510,
-				Title:        "portfolio - Explorador de archivos",
-				AppName:      "explorer",
-				Type:         domain.LiveTargetFolder,
 			},
 		},
 	})
@@ -53,24 +59,28 @@ func TestModelLoadsTargetsIntoMenu(t *testing.T) {
 		t.Fatalf("phase = %d, want %d", got.phase, phaseEditing)
 	}
 
-	if len(got.targets) != 2 {
-		t.Fatalf("len(targets) = %d, want 2 live targets only", len(got.targets))
+	if len(got.groups) != 2 {
+		t.Fatalf("len(groups) = %d, want 2", len(got.groups))
 	}
 
-	if got.targets[0].kind != menuItemLiveTarget {
-		t.Fatalf("targets[0].kind = %d, want %d", got.targets[0].kind, menuItemLiveTarget)
+	if got.groups[0].title != "Chrome" {
+		t.Fatalf("groups[0].title = %q, want Chrome first", got.groups[0].title)
+	}
+
+	if got.groups[1].title != "Antigravity" {
+		t.Fatalf("groups[1].title = %q, want Antigravity second", got.groups[1].title)
 	}
 }
 
-func TestModelLoadsEmptyTargetListWithoutURLFallback(t *testing.T) {
+func TestModelLoadsEmptyTargetListWithoutGroups(t *testing.T) {
 	t.Parallel()
 
 	model := NewModel(&fakeStudio{})
 	next, _ := model.Update(targetsLoadedMsg{})
 	got := next.(Model)
 
-	if len(got.targets) != 0 {
-		t.Fatalf("len(targets) = %d, want 0 when nothing is open", len(got.targets))
+	if len(got.groups) != 0 {
+		t.Fatalf("len(groups) = %d, want 0 when nothing is open", len(got.groups))
 	}
 }
 

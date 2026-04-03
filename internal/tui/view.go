@@ -1,4 +1,4 @@
-﻿package tui
+package tui
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ func (m Model) renderHeader() string {
 		m.styles.title.Render("Interactive Capture Studio"),
 	)
 
-	subtitle := m.styles.muted.Render("Choose an already-open target and capture its current live state")
+	subtitle := m.styles.muted.Render("Choose an app group first, then drill into windows and tabs only when needed")
 	return m.styles.panel.Render(lipgloss.JoinVertical(lipgloss.Left, title, subtitle))
 }
 
@@ -54,13 +54,53 @@ func (m Model) renderBody() string {
 
 func (m Model) renderEditingScreen() string {
 	switch m.screen {
+	case screenTargetSelect:
+		return m.renderTargetSelection()
 	case screenTabSelect:
 		return m.renderTabSelection()
 	case screenLiveOptions:
 		return m.renderLiveOptions()
 	default:
-		return m.renderTargetSelection()
+		return m.renderGroupSelection()
 	}
+}
+
+func (m Model) renderGroupSelection() string {
+	if len(m.groups) == 0 {
+		return m.styles.panel.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				m.styles.label.Render("No open capture targets found"),
+				m.styles.muted.Render("Open a folder, app, or browser window first, then press R to refresh."),
+			),
+		)
+	}
+
+	blocks := make([]string, 0, len(m.groups))
+	for i, item := range m.groups {
+		style := m.styles.field
+		prefix := "  "
+		if i == m.groupIndex {
+			style = m.styles.fieldFocused
+			prefix = "> "
+		}
+
+		content := lipgloss.JoinVertical(
+			lipgloss.Left,
+			m.styles.label.Render(prefix+item.title),
+			m.styles.muted.Render(item.detail),
+		)
+		blocks = append(blocks, style.Render(content))
+	}
+
+	return m.styles.panel.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			m.styles.label.Render("Select the app group"),
+			m.styles.muted.Render("Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
+			lipgloss.JoinVertical(lipgloss.Left, blocks...),
+		),
+	)
 }
 
 func (m Model) renderTargetSelection() string {
@@ -68,8 +108,8 @@ func (m Model) renderTargetSelection() string {
 		return m.styles.panel.Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
-				m.styles.label.Render("No open capture targets found"),
-				m.styles.muted.Render("Open a folder, app, or browser window first, then press R to refresh."),
+				m.styles.label.Render("This group has no visible windows"),
+				m.styles.muted.Render("Go back and choose another group, or press R to refresh from the main screen."),
 			),
 		)
 	}
@@ -94,8 +134,8 @@ func (m Model) renderTargetSelection() string {
 	return m.styles.panel.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.styles.label.Render("Select what you want to capture"),
-			m.styles.muted.Render("Open folders, apps, and browser windows appear here. Browser tabs are suggested next when available."),
+			m.styles.label.Render("Choose the window inside the selected group"),
+			m.styles.muted.Render(m.selectedGroup.title+" • "+m.selectedGroup.detail),
 			lipgloss.JoinVertical(lipgloss.Left, blocks...),
 		),
 	)
@@ -136,13 +176,18 @@ func (m Model) renderTabSelection() string {
 
 func (m Model) renderLiveOptions() string {
 	summary := []string{
-		m.styles.label.Render("Selected live target"),
+		m.styles.label.Render("Selected group"),
+		m.styles.text.Render(m.selectedGroup.title),
+		m.styles.muted.Render(m.selectedGroup.detail),
+		"",
+		m.styles.label.Render("Selected window"),
 		m.styles.text.Render(m.selectedTarget.Title),
-		m.styles.muted.Render(strings.Join(compactNonEmpty([]string{m.selectedTarget.AppName, string(m.selectedTarget.Type)}), " • ")),
+		m.styles.muted.Render(strings.Join(compactNonEmpty([]string{displayAppName(m.selectedTarget.AppName), string(m.selectedTarget.Type)}), " • ")),
 	}
 
 	if m.hasSelectedTab {
 		summary = append(summary,
+			"",
 			m.styles.label.Render("Selected browser tab"),
 			m.styles.text.Render(m.selectedTab.Title),
 		)
@@ -181,12 +226,14 @@ func (m Model) renderStatus() string {
 
 func (m Model) instructionsForCurrentScreen() string {
 	switch m.screen {
+	case screenTargetSelect:
+		return "↑/↓ choose window • Enter open/capture • Esc back to groups • Ctrl+C quit"
 	case screenTabSelect:
-		return "↑/↓ choose tab • Enter confirm • Esc back • Ctrl+C quit"
+		return "↑/↓ choose tab • Enter confirm • Esc back to windows • Ctrl+C quit"
 	case screenLiveOptions:
 		return "Type output path • Enter capture current state • Esc back • Ctrl+C quit"
 	default:
-		return "↑/↓ choose target • Enter inspect/capture • R reload • Ctrl+C quit"
+		return "↑/↓ choose group • Enter open group • R reload • Ctrl+C quit"
 	}
 }
 

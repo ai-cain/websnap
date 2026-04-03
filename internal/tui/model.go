@@ -1,7 +1,9 @@
-﻿package tui
+package tui
 
 import (
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -23,19 +25,19 @@ const (
 type screen int
 
 const (
-	screenTargetSelect screen = iota
+	screenGroupSelect screen = iota
+	screenTargetSelect
 	screenTabSelect
 	screenLiveOptions
 )
 
-type menuItemKind int
-
-const (
-	menuItemLiveTarget menuItemKind = iota
-)
+type groupMenuItem struct {
+	title   string
+	detail  string
+	targets []domain.LiveTarget
+}
 
 type targetMenuItem struct {
-	kind   menuItemKind
 	title  string
 	detail string
 	target domain.LiveTarget
@@ -59,6 +61,11 @@ type Model struct {
 	lastWidth  int64
 	lastHeight int64
 
+	groups           []groupMenuItem
+	groupIndex       int
+	selectedGroup    groupMenuItem
+	hasSelectedGroup bool
+
 	targets           []targetMenuItem
 	targetIndex       int
 	tabs              []domain.BrowserTab
@@ -78,14 +85,14 @@ func NewModel(studio Studio) Model {
 	spin.Style = s.accent
 
 	model := Model{
-		studio:      studio,
-		liveOut:     liveOut,
-		spinner:     spin,
-		styles:      s,
-		screen:      screenTargetSelect,
-		phase:       phaseBusy,
-		busyLabel:   "Discovering open apps, folders, and browser windows…",
-		targetIndex: 0,
+		studio:     studio,
+		liveOut:    liveOut,
+		spinner:    spin,
+		styles:     s,
+		screen:     screenGroupSelect,
+		phase:      phaseBusy,
+		busyLabel:  "Discovering open apps, folders, and browser windows…",
+		groupIndex: 0,
 	}
 
 	model.blurLiveInput()
@@ -143,9 +150,20 @@ func (m *Model) startBusy(label string) {
 	m.lastErr = nil
 }
 
-func (m *Model) enterTargetSelection() {
+func (m *Model) enterGroupSelection() {
+	m.screen = screenGroupSelect
+	m.phase = phaseEditing
+	m.blurLiveInput()
+}
+
+func (m *Model) enterTargetSelection(group groupMenuItem) {
+	m.selectedGroup = group
+	m.hasSelectedGroup = true
+	m.targets = buildTargetMenuItems(group.targets)
+	m.targetIndex = 0
 	m.screen = screenTargetSelect
 	m.phase = phaseEditing
+	m.lastErr = nil
 	m.blurLiveInput()
 }
 
@@ -177,22 +195,157 @@ func newInput(placeholder, value string, s styles) textinput.Model {
 	return input
 }
 
-func newLiveTargetMenuItem(target domain.LiveTarget) targetMenuItem {
-	label := target.Title
-	if strings.TrimSpace(label) == "" {
-		label = target.AppName
+func buildGroupMenuItems(targets []domain.LiveTarget) []groupMenuItem {
+	type grouped struct {
+		appName string
+		tType   domain.LiveTargetType
+		targets []domain.LiveTarget
 	}
 
-	detailParts := []string{strings.TrimSpace(target.AppName), string(target.Type)}
-	if target.Type == domain.LiveTargetBrowser && target.CanListTabs {
-		detailParts = append(detailParts, "tabs available")
+	buckets := map[string]*grouped{}
+	order := make([]string, 0)
+
+	for _, target := range targets {
+		appName := normalizedAppName(target.AppName)
+		key := string(target.Type) + "|" + appName
+		if _, ok := buckets[key]; !ok {
+			buckets[key] = &grouped{
+				appName: appName,
+				tType:   target.Type,
+				targets: make([]domain.LiveTarget, 0),
+			}
+			order = append(order, key)
+		}
+
+		buckets[key].targets = append(buckets[key].targets, target)
 	}
 
-	return targetMenuItem{
-		kind:   menuItemLiveTarget,
-		title:  label,
-		detail: strings.Join(compactNonEmpty(detailParts), " • "),
-		target: target,
+	sort.Slice(order, func(i, j int) bool {
+		left := buckets[order[i]]
+		right := buckets[order[j]]
+		if groupRank(left.tType) != groupRank(right.tType) {
+			return groupRank(left.tType) < groupRank(right.tType)
+		}
+		return displayAppName(left.appName) < displayAppName(right.appName)
+	})
+
+	items := make([]groupMenuItem, 0, len(order))
+	for _, key := range order {
+		group := buckets[key]
+		sort.Slice(group.targets, func(i, j int) bool {
+			return group.targets[i].Title < group.targets[j].Title
+		})
+
+		items = append(items, groupMenuItem{
+			title:   displayAppName(group.appName),
+			detail:  describeGroup(group.tType, len(group.targets)),
+			targets: group.targets,
+		})
+	}
+
+	return items
+}
+
+func buildTargetMenuItems(targets []domain.LiveTarget) []targetMenuItem {
+	items := make([]targetMenuItem, 0, len(targets))
+	for _, target := range targets {
+		detailParts := []string{string(target.Type)}
+		if target.Type == domain.LiveTargetBrowser && target.CanListTabs {
+			detailParts = append(detailParts, "tabs available")
+		}
+
+		items = append(items, targetMenuItem{
+			title:  target.Title,
+			detail: strings.Join(compactNonEmpty(detailParts), " • "),
+			target: target,
+		})
+	}
+
+	return items
+}
+
+func normalizedAppName(appName string) string {
+	appName = strings.TrimSpace(strings.ToLower(appName))
+	if appName == "" {
+		return "unknown"
+	}
+
+	return appName
+}
+
+func displayAppName(appName string) string {
+	switch normalizedAppName(appName) {
+	case "chrome":
+		return "Chrome"
+	case "msedge":
+		return "Edge"
+	case "explorer":
+		return "Explorador"
+	case "applicationframehost":
+		return "Windows Host"
+	case "systemsettings":
+		return "Configuración"
+	case "textinputhost":
+		return "Entrada de Windows"
+	case "unknown":
+		return "Desconocido"
+	default:
+		return titleCase(appName)
+	}
+}
+
+func titleCase(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	parts := strings.FieldsFunc(value, func(r rune) bool {
+		return r == '-' || r == '_' || unicode.IsSpace(r)
+	})
+
+	for i, part := range parts {
+		runes := []rune(part)
+		if len(runes) == 0 {
+			continue
+		}
+		runes[0] = unicode.ToUpper(runes[0])
+		for j := 1; j < len(runes); j++ {
+			runes[j] = unicode.ToLower(runes[j])
+		}
+		parts[i] = string(runes)
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func describeGroup(targetType domain.LiveTargetType, count int) string {
+	itemLabel := "ventanas"
+	if count == 1 {
+		itemLabel = "ventana"
+	}
+
+	switch targetType {
+	case domain.LiveTargetBrowser:
+		return pluralize(count, itemLabel) + " • navegador"
+	case domain.LiveTargetFolder:
+		return pluralize(count, itemLabel) + " • carpetas"
+	default:
+		return pluralize(count, itemLabel) + " • app"
+	}
+}
+
+func pluralize(count int, noun string) string {
+	return strconv.Itoa(count) + " " + noun
+}
+
+func groupRank(targetType domain.LiveTargetType) int {
+	switch targetType {
+	case domain.LiveTargetBrowser:
+		return 0
+	case domain.LiveTargetFolder:
+		return 1
+	default:
+		return 2
 	}
 }
 
