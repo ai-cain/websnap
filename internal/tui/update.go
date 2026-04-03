@@ -107,11 +107,17 @@ func (m Model) handleGroupSelectionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "r":
 		return m.reloadTargets()
+	case "left", "h":
+		m.moveGroupHorizontal(-1)
+		return m, nil
+	case "right", "l":
+		m.moveGroupHorizontal(1)
+		return m, nil
 	case "up", "k", "shift+tab":
-		m.moveGroupSelection(-1)
+		m.moveGroupVertical(-1)
 		return m, nil
 	case "down", "j", "tab":
-		m.moveGroupSelection(1)
+		m.moveGroupVertical(1)
 		return m, nil
 	case "enter":
 		return m.selectCurrentGroup()
@@ -202,6 +208,55 @@ func (m *Model) moveGroupSelection(delta int) {
 	if m.groupIndex >= len(m.groups) {
 		m.groupIndex = 0
 	}
+}
+
+func (m *Model) moveGroupHorizontal(delta int) {
+	if len(m.groups) == 0 {
+		return
+	}
+
+	if m.groupGridColumns() == 1 {
+		m.moveGroupSelection(delta)
+		return
+	}
+
+	m.groupIndex += delta
+	if m.groupIndex < 0 {
+		m.groupIndex = len(m.groups) - 1
+	}
+	if m.groupIndex >= len(m.groups) {
+		m.groupIndex = 0
+	}
+}
+
+func (m *Model) moveGroupVertical(delta int) {
+	if len(m.groups) == 0 {
+		return
+	}
+
+	columns := m.groupGridColumns()
+	if columns == 1 {
+		m.moveGroupSelection(delta)
+		return
+	}
+
+	next := m.groupIndex + (delta * columns)
+	if next < 0 {
+		next = m.groupIndex % columns
+		for next+columns < len(m.groups) {
+			next += columns
+		}
+	}
+
+	if next >= len(m.groups) {
+		next = m.groupIndex % columns
+	}
+
+	if next >= len(m.groups) {
+		next = len(m.groups) - 1
+	}
+
+	m.groupIndex = next
 }
 
 func (m *Model) moveTargetSelection(delta int) {

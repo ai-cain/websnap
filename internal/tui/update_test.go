@@ -45,6 +45,44 @@ func TestModelSelectsGroupAndShowsTargets(t *testing.T) {
 	}
 }
 
+func TestModelCanMoveAcrossGroupGridWithArrowKeys(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.width = 140
+	model.groups = []groupMenuItem{
+		{title: "Chrome"},
+		{title: "Antigravity"},
+		{title: "Explorador"},
+		{title: "Configuración"},
+	}
+
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyRight})
+	got := next.(Model)
+	if got.groupIndex != 1 {
+		t.Fatalf("groupIndex after right = %d, want 1", got.groupIndex)
+	}
+
+	next, _ = got.Update(tea.KeyMsg{Type: tea.KeyDown})
+	got = next.(Model)
+	if got.groupIndex != 3 {
+		t.Fatalf("groupIndex after down = %d, want 3", got.groupIndex)
+	}
+
+	next, _ = got.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	got = next.(Model)
+	if got.groupIndex != 2 {
+		t.Fatalf("groupIndex after left = %d, want 2", got.groupIndex)
+	}
+
+	next, _ = got.Update(tea.KeyMsg{Type: tea.KeyUp})
+	got = next.(Model)
+	if got.groupIndex != 0 {
+		t.Fatalf("groupIndex after up = %d, want 0", got.groupIndex)
+	}
+}
+
 func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 	t.Parallel()
 

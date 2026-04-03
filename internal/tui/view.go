@@ -79,18 +79,21 @@ func (m Model) renderGroupSelection() string {
 	blocks := make([]string, 0, len(m.groups))
 	for i, item := range m.groups {
 		style := m.styles.field
-		prefix := "  "
 		if i == m.groupIndex {
 			style = m.styles.fieldFocused
-			prefix = "> "
 		}
 
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.styles.label.Render(prefix+item.title),
+			m.styles.label.Render(item.title),
 			m.styles.muted.Render(item.detail),
 		)
-		blocks = append(blocks, style.Render(content))
+		blocks = append(blocks, style.Width(m.groupCardWidth()).Render(content))
+	}
+
+	body := lipgloss.JoinVertical(lipgloss.Left, blocks...)
+	if m.groupGridColumns() > 1 {
+		body = renderGrid(blocks, m.groupGridColumns())
 	}
 
 	return m.styles.panel.Render(
@@ -98,7 +101,7 @@ func (m Model) renderGroupSelection() string {
 			lipgloss.Left,
 			m.styles.label.Render("Select the app group"),
 			m.styles.muted.Render("Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
-			lipgloss.JoinVertical(lipgloss.Left, blocks...),
+			body,
 		),
 	)
 }
@@ -261,4 +264,36 @@ func contentWidth(total int) int {
 	default:
 		return 70
 	}
+}
+
+func (m Model) groupCardWidth() int {
+	if m.groupGridColumns() <= 1 {
+		return max(40, contentWidth(m.width)-8)
+	}
+
+	return max(26, (contentWidth(m.width)-10)/2)
+}
+
+func renderGrid(items []string, columns int) string {
+	if columns <= 1 {
+		return lipgloss.JoinVertical(lipgloss.Left, items...)
+	}
+
+	rows := make([]string, 0, (len(items)+columns-1)/columns)
+	for start := 0; start < len(items); start += columns {
+		end := start + columns
+		if end > len(items) {
+			end = len(items)
+		}
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, items[start:end]...))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

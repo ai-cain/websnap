@@ -246,6 +246,18 @@ func buildGroupMenuItems(targets []domain.LiveTarget) []groupMenuItem {
 	return items
 }
 
+func (m Model) groupGridColumns() int {
+	if len(m.groups) <= 1 {
+		return 1
+	}
+
+	if contentWidth(m.width) >= 88 {
+		return 2
+	}
+
+	return 1
+}
+
 func buildTargetMenuItems(targets []domain.LiveTarget) []targetMenuItem {
 	items := make([]targetMenuItem, 0, len(targets))
 	for _, target := range targets {
