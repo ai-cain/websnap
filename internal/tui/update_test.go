@@ -1,4 +1,4 @@
-package tui
+﻿package tui
 
 import (
 	"testing"
@@ -22,7 +22,6 @@ func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 	model := NewModel(studio)
 	model.phase = phaseEditing
 	model.targets = []targetMenuItem{
-		newURLMenuItem(),
 		newLiveTargetMenuItem(domain.LiveTarget{
 			WindowHandle: 131584,
 			Title:        "WhatsApp - Google Chrome",
@@ -31,7 +30,7 @@ func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 			CanListTabs:  true,
 		}),
 	}
-	model.targetIndex = 1
+	model.targetIndex = 0
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	busy := next.(Model)
@@ -66,7 +65,6 @@ func TestModelSingleBrowserTabAutoAdvancesToLiveOptions(t *testing.T) {
 	model := NewModel(studio)
 	model.phase = phaseEditing
 	model.targets = []targetMenuItem{
-		newURLMenuItem(),
 		newLiveTargetMenuItem(domain.LiveTarget{
 			WindowHandle: 131584,
 			Title:        "WhatsApp - Google Chrome",
@@ -75,7 +73,7 @@ func TestModelSingleBrowserTabAutoAdvancesToLiveOptions(t *testing.T) {
 			CanListTabs:  true,
 		}),
 	}
-	model.targetIndex = 1
+	model.targetIndex = 0
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	busy := next.(Model)

@@ -7,15 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var fieldLabels = []string{
-	"Target URL",
-	"Viewport width",
-	"Viewport height",
-	"Capture mode",
-	"Selector",
-	"Output path",
-}
-
 func (m Model) View() string {
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -35,7 +26,7 @@ func (m Model) renderHeader() string {
 		m.styles.title.Render("Interactive Capture Studio"),
 	)
 
-	subtitle := m.styles.muted.Render("Choose an already-open target or fall back to a fresh reproducible URL capture")
+	subtitle := m.styles.muted.Render("Choose an already-open target and capture its current live state")
 	return m.styles.panel.Render(lipgloss.JoinVertical(lipgloss.Left, title, subtitle))
 }
 
@@ -67,14 +58,22 @@ func (m Model) renderEditingScreen() string {
 		return m.renderTabSelection()
 	case screenLiveOptions:
 		return m.renderLiveOptions()
-	case screenURLForm:
-		return m.renderURLForm()
 	default:
 		return m.renderTargetSelection()
 	}
 }
 
 func (m Model) renderTargetSelection() string {
+	if len(m.targets) == 0 {
+		return m.styles.panel.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				m.styles.label.Render("No open capture targets found"),
+				m.styles.muted.Render("Open a folder, app, or browser window first, then press R to refresh."),
+			),
+		)
+	}
+
 	blocks := make([]string, 0, len(m.targets))
 	for i, item := range m.targets {
 		style := m.styles.field
@@ -149,12 +148,11 @@ func (m Model) renderLiveOptions() string {
 		)
 	}
 
-	outputStyle := m.styles.fieldFocused
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		lipgloss.JoinVertical(lipgloss.Left, summary...),
 		"",
-		outputStyle.Render(lipgloss.JoinVertical(
+		m.styles.fieldFocused.Render(lipgloss.JoinVertical(
 			lipgloss.Left,
 			m.styles.label.Render("Output path"),
 			m.liveOut.View(),
@@ -162,39 +160,6 @@ func (m Model) renderLiveOptions() string {
 	)
 
 	return m.styles.panel.Render(content)
-}
-
-func (m Model) renderURLForm() string {
-	blocks := make([]string, 0, len(fieldLabels))
-	for field := range fieldLabels {
-		if field == fieldMode {
-			blocks = append(blocks, m.renderModeField(field))
-			continue
-		}
-
-		idx := inputIndex(field)
-		content := lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render(fieldLabels[field]),
-			m.renderFieldValue(field, idx),
-		)
-
-		style := m.styles.field
-		if field == m.focus {
-			style = m.styles.fieldFocused
-		}
-
-		blocks = append(blocks, style.Render(content))
-	}
-
-	return m.styles.panel.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render("Fresh reproducible URL capture"),
-			m.styles.muted.Render("Use this when you want websnap to open a new clean page and capture it headlessly."),
-			lipgloss.JoinVertical(lipgloss.Left, blocks...),
-		),
-	)
 }
 
 func (m Model) renderStatus() string {
@@ -217,13 +182,11 @@ func (m Model) renderStatus() string {
 func (m Model) instructionsForCurrentScreen() string {
 	switch m.screen {
 	case screenTabSelect:
-		return "?/? choose tab • Enter confirm • Esc back • Ctrl+C quit"
+		return "↑/↓ choose tab • Enter confirm • Esc back • Ctrl+C quit"
 	case screenLiveOptions:
 		return "Type output path • Enter capture current state • Esc back • Ctrl+C quit"
-	case screenURLForm:
-		return "Tab move • ?/? change mode • Enter continue/capture • Esc back • Ctrl+C quit"
 	default:
-		return "?/? choose target • Enter inspect/capture • R reload • Ctrl+C quit"
+		return "↑/↓ choose target • Enter inspect/capture • R reload • Ctrl+C quit"
 	}
 }
 
@@ -232,7 +195,7 @@ func (m Model) renderFooter() string {
 		m.styles.shortcut.Render("Enter"),
 		m.styles.muted.Render("confirm"),
 		m.styles.shortcut.Render("Tab"),
-		m.styles.muted.Render("next item/field"),
+		m.styles.muted.Render("next item"),
 		m.styles.shortcut.Render("Esc"),
 		m.styles.muted.Render("back"),
 		m.styles.shortcut.Render("Ctrl+C"),
@@ -240,39 +203,6 @@ func (m Model) renderFooter() string {
 	}
 
 	return m.styles.footer.Render(strings.Join(parts, "   "))
-}
-
-func (m Model) renderModeField(field int) string {
-	options := make([]string, 0, len(captureModes))
-	for _, option := range captureModes {
-		style := m.styles.muted
-		if option == m.mode {
-			style = m.styles.accent.Bold(true)
-		}
-
-		options = append(options, style.Render(option.label()))
-	}
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.styles.label.Render(fieldLabels[field]),
-		strings.Join(options, "   "),
-	)
-
-	style := m.styles.field
-	if field == m.focus {
-		style = m.styles.fieldFocused
-	}
-
-	return style.Render(content)
-}
-
-func (m Model) renderFieldValue(field, idx int) string {
-	if field == fieldSelector && m.mode != modeSelector {
-		return m.styles.muted.Render("Used only in selector mode")
-	}
-
-	return m.urlInputs[idx].View()
 }
 
 func contentWidth(total int) int {
@@ -285,4 +215,3 @@ func contentWidth(total int) int {
 		return 70
 	}
 }
-

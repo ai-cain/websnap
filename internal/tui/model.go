@@ -2,7 +2,6 @@
 
 import (
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -11,15 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-)
-
-const (
-	fieldURL = iota
-	fieldWidth
-	fieldHeight
-	fieldMode
-	fieldSelector
-	fieldOut
 )
 
 type phase int
@@ -36,14 +26,12 @@ const (
 	screenTargetSelect screen = iota
 	screenTabSelect
 	screenLiveOptions
-	screenURLForm
 )
 
 type menuItemKind int
 
 const (
-	menuItemURL menuItemKind = iota
-	menuItemLiveTarget
+	menuItemLiveTarget menuItemKind = iota
 )
 
 type targetMenuItem struct {
@@ -56,12 +44,9 @@ type targetMenuItem struct {
 type Model struct {
 	studio Studio
 
-	urlInputs []textinput.Model
-	liveOut   textinput.Model
-	focus     int
-	mode      captureMode
-	phase     phase
-	screen    screen
+	liveOut textinput.Model
+	phase   phase
+	screen  screen
 
 	spinner   spinner.Model
 	styles    styles
@@ -74,26 +59,18 @@ type Model struct {
 	lastWidth  int64
 	lastHeight int64
 
-	targets          []targetMenuItem
-	targetIndex      int
-	tabs             []domain.BrowserTab
-	tabIndex         int
-	selectedTarget   domain.LiveTarget
+	targets           []targetMenuItem
+	targetIndex       int
+	tabs              []domain.BrowserTab
+	tabIndex          int
+	selectedTarget    domain.LiveTarget
 	hasSelectedTarget bool
-	selectedTab      domain.BrowserTab
-	hasSelectedTab   bool
+	selectedTab       domain.BrowserTab
+	hasSelectedTab    bool
 }
 
 func NewModel(studio Studio) Model {
 	s := newStyles()
-	urlInputs := []textinput.Model{
-		newInput("https://example.com", "", s),
-		newInput("", "1440", s),
-		newInput("", "900", s),
-		newInput(".hero", "", s),
-		newInput("./captures/home.png", "", s),
-	}
-
 	liveOut := newInput("./captures/live-target.png", "", s)
 
 	spin := spinner.New()
@@ -101,57 +78,22 @@ func NewModel(studio Studio) Model {
 	spin.Style = s.accent
 
 	model := Model{
-		studio:     studio,
-		urlInputs:  urlInputs,
-		liveOut:    liveOut,
-		mode:       modeViewport,
-		spinner:    spin,
-		styles:     s,
-		screen:     screenTargetSelect,
-		phase:      phaseBusy,
-		busyLabel:  "Discovering open apps, folders, and browser windows…",
-		targets:    []targetMenuItem{newURLMenuItem()},
+		studio:      studio,
+		liveOut:     liveOut,
+		spinner:     spin,
+		styles:      s,
+		screen:      screenTargetSelect,
+		phase:       phaseBusy,
+		busyLabel:   "Discovering open apps, folders, and browser windows…",
 		targetIndex: 0,
 	}
 
-	model.blurURLInputs()
 	model.blurLiveInput()
 	return model
 }
 
 func (m Model) Init() tea.Cmd {
 	return loadTargetsCmd(m.studio)
-}
-
-func (m Model) buildRequest() (domain.CaptureRequest, error) {
-	width, err := strconv.ParseInt(m.urlInputs[inputIndex(fieldWidth)].Value(), 10, 64)
-	if err != nil {
-		return domain.CaptureRequest{}, err
-	}
-
-	height, err := strconv.ParseInt(m.urlInputs[inputIndex(fieldHeight)].Value(), 10, 64)
-	if err != nil {
-		return domain.CaptureRequest{}, err
-	}
-
-	req := domain.CaptureRequest{
-		URL:    m.urlInputs[inputIndex(fieldURL)].Value(),
-		Width:  width,
-		Height: height,
-		Out:    m.urlInputs[inputIndex(fieldOut)].Value(),
-	}
-
-	switch m.mode {
-	case modeSelector:
-		req.Selector = m.urlInputs[inputIndex(fieldSelector)].Value()
-		if strings.TrimSpace(req.Selector) == "" {
-			return domain.CaptureRequest{}, apperrors.New(apperrors.CodeInvalidArgument, "selector is required in selector mode")
-		}
-	case modeFullPage:
-		req.FullPage = true
-	}
-
-	return req, req.Validate()
 }
 
 func (m Model) buildLiveRequest() (domain.LiveCaptureRequest, error) {
@@ -172,37 +114,7 @@ func (m Model) buildLiveRequest() (domain.LiveCaptureRequest, error) {
 	return req, req.Validate()
 }
 
-func (m *Model) setFocus(field int) {
-	m.focus = field
-	m.liveOut.Blur()
-	m.liveOut.PromptStyle = m.styles.muted
-
-	for current := fieldURL; current <= fieldOut; current++ {
-		idx := inputIndex(current)
-		if idx < 0 {
-			continue
-		}
-
-		if current == field {
-			m.urlInputs[idx].Focus()
-			m.urlInputs[idx].PromptStyle = m.styles.focusedPrompt
-			continue
-		}
-
-		m.urlInputs[idx].Blur()
-		m.urlInputs[idx].PromptStyle = m.styles.muted
-	}
-}
-
-func (m *Model) blurURLInputs() {
-	for idx := range m.urlInputs {
-		m.urlInputs[idx].Blur()
-		m.urlInputs[idx].PromptStyle = m.styles.muted
-	}
-}
-
 func (m *Model) focusLiveInput() {
-	m.blurURLInputs()
 	m.liveOut.Focus()
 	m.liveOut.PromptStyle = m.styles.focusedPrompt
 	if strings.TrimSpace(m.liveOut.Value()) == "" {
@@ -234,15 +146,7 @@ func (m *Model) startBusy(label string) {
 func (m *Model) enterTargetSelection() {
 	m.screen = screenTargetSelect
 	m.phase = phaseEditing
-	m.blurURLInputs()
 	m.blurLiveInput()
-}
-
-func (m *Model) enterURLForm() {
-	m.screen = screenURLForm
-	m.phase = phaseEditing
-	m.lastErr = nil
-	m.setFocus(fieldURL)
 }
 
 func (m *Model) enterLiveOptions() {
@@ -258,7 +162,6 @@ func (m *Model) enterTabSelection(tabs []domain.BrowserTab) {
 	m.tabs = tabs
 	m.tabIndex = selectedTabIndex(tabs)
 	m.lastErr = nil
-	m.blurURLInputs()
 	m.blurLiveInput()
 }
 
@@ -272,31 +175,6 @@ func newInput(placeholder, value string, s styles) textinput.Model {
 	input.TextStyle = s.text
 	input.PlaceholderStyle = s.muted
 	return input
-}
-
-func inputIndex(field int) int {
-	switch field {
-	case fieldURL:
-		return 0
-	case fieldWidth:
-		return 1
-	case fieldHeight:
-		return 2
-	case fieldSelector:
-		return 3
-	case fieldOut:
-		return 4
-	default:
-		return -1
-	}
-}
-
-func newURLMenuItem() targetMenuItem {
-	return targetMenuItem{
-		kind:   menuItemURL,
-		title:  "Open a fresh URL",
-		detail: "Use the original reproducible headless capture flow",
-	}
 }
 
 func newLiveTargetMenuItem(target domain.LiveTarget) targetMenuItem {
@@ -386,4 +264,3 @@ func compactNonEmpty(values []string) []string {
 
 	return compact
 }
-

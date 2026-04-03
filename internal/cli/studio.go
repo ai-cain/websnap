@@ -18,25 +18,15 @@ type liveCaptureRunner interface {
 }
 
 type interactiveStudio struct {
-	shotRunner  ShotRunner
 	targets     liveTargetCatalog
 	liveCapture liveCaptureRunner
 }
 
-func NewInteractiveStudio(shotRunner ShotRunner, targets liveTargetCatalog, liveCapture liveCaptureRunner) tui.Studio {
+func NewInteractiveStudio(targets liveTargetCatalog, liveCapture liveCaptureRunner) tui.Studio {
 	return interactiveStudio{
-		shotRunner:  shotRunner,
 		targets:     targets,
 		liveCapture: liveCapture,
 	}
-}
-
-func (s interactiveStudio) CaptureURL(ctx context.Context, req domain.CaptureRequest) (domain.CaptureResult, error) {
-	if s.shotRunner == nil {
-		return domain.CaptureResult{}, apperrors.New(apperrors.CodeInvalidArgument, "shot runner is not configured")
-	}
-
-	return s.shotRunner.Execute(ctx, req)
 }
 
 func (s interactiveStudio) ListTargets(ctx context.Context) ([]domain.LiveTarget, error) {
@@ -62,4 +52,3 @@ func (s interactiveStudio) CaptureLive(ctx context.Context, req domain.LiveCaptu
 
 	return s.liveCapture.Execute(ctx, req)
 }
-

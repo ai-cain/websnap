@@ -1,4 +1,4 @@
-package cli
+﻿package cli
 
 import (
 	"context"
@@ -21,11 +21,6 @@ func (f *fakeShotRunner) Execute(_ context.Context, req domain.CaptureRequest) (
 
 type fakeStudio struct {
 	targets []domain.LiveTarget
-}
-
-func (f *fakeStudio) CaptureURL(ctx context.Context, req domain.CaptureRequest) (domain.CaptureResult, error) {
-	runner := &fakeShotRunner{}
-	return runner.Execute(ctx, req)
 }
 
 func (f *fakeStudio) ListTargets(_ context.Context) ([]domain.LiveTarget, error) {

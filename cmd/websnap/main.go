@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ func main() {
 		time.Now,
 	)
 
-	studio := cli.NewInteractiveStudio(runner, liveDesktop, liveRunner)
+	studio := cli.NewInteractiveStudio(liveDesktop, liveRunner)
 
 	app := cli.NewAppWithInput(runner, studio, os.Stdin, os.Stdout, os.Stderr)
 	os.Exit(app.Run(os.Args[1:]))

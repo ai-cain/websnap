@@ -1,11 +1,10 @@
-package tui
+﻿package tui
 
 import (
 	"context"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestNewModelStartsInTargetSelection(t *testing.T) {
@@ -54,64 +53,24 @@ func TestModelLoadsTargetsIntoMenu(t *testing.T) {
 		t.Fatalf("phase = %d, want %d", got.phase, phaseEditing)
 	}
 
-	if len(got.targets) != 3 {
-		t.Fatalf("len(targets) = %d, want 3 including URL entry", len(got.targets))
+	if len(got.targets) != 2 {
+		t.Fatalf("len(targets) = %d, want 2 live targets only", len(got.targets))
 	}
 
-	if got.targets[0].kind != menuItemURL {
-		t.Fatalf("targets[0].kind = %d, want %d", got.targets[0].kind, menuItemURL)
+	if got.targets[0].kind != menuItemLiveTarget {
+		t.Fatalf("targets[0].kind = %d, want %d", got.targets[0].kind, menuItemLiveTarget)
 	}
 }
 
-func TestModelCanOpenURLFormFromTargetMenu(t *testing.T) {
+func TestModelLoadsEmptyTargetListWithoutURLFallback(t *testing.T) {
 	t.Parallel()
 
 	model := NewModel(&fakeStudio{})
-	model.phase = phaseEditing
-	model.targets = []targetMenuItem{
-		newURLMenuItem(),
-	}
-
-	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ := model.Update(targetsLoadedMsg{})
 	got := next.(Model)
 
-	if got.screen != screenURLForm {
-		t.Fatalf("screen = %d, want %d", got.screen, screenURLForm)
-	}
-
-	if cmd == nil {
-		t.Fatal("entering URL form should return a blink command")
-	}
-}
-
-func TestModelBuildRequest(t *testing.T) {
-	t.Parallel()
-
-	model := NewModel(&fakeStudio{})
-	model.phase = phaseEditing
-	model.screen = screenURLForm
-	model.urlInputs[inputIndex(fieldURL)].SetValue("https://example.com")
-	model.urlInputs[inputIndex(fieldWidth)].SetValue("1600")
-	model.urlInputs[inputIndex(fieldHeight)].SetValue("1000")
-	model.urlInputs[inputIndex(fieldSelector)].SetValue("#app")
-	model.urlInputs[inputIndex(fieldOut)].SetValue("captures/home.png")
-	model.mode = modeSelector
-
-	req, err := model.buildRequest()
-	if err != nil {
-		t.Fatalf("buildRequest() error = %v", err)
-	}
-
-	expected := domain.CaptureRequest{
-		URL:      "https://example.com",
-		Width:    1600,
-		Height:   1000,
-		Selector: "#app",
-		Out:      "captures/home.png",
-	}
-
-	if req != expected {
-		t.Fatalf("request = %#v, want %#v", req, expected)
+	if len(got.targets) != 0 {
+		t.Fatalf("len(targets) = %d, want 0 when nothing is open", len(got.targets))
 	}
 }
 
@@ -139,19 +98,11 @@ func TestModelBuildLiveRequest(t *testing.T) {
 }
 
 type fakeStudio struct {
-	targets        []domain.LiveTarget
-	tabsByHandle   map[int64][]domain.BrowserTab
-	urlResult      domain.CaptureResult
-	liveResult     domain.CaptureResult
-	urlErr         error
-	liveErr        error
-	lastURLRequest domain.CaptureRequest
-	lastLiveReq    domain.LiveCaptureRequest
-}
-
-func (f *fakeStudio) CaptureURL(_ context.Context, req domain.CaptureRequest) (domain.CaptureResult, error) {
-	f.lastURLRequest = req
-	return f.urlResult, f.urlErr
+	targets      []domain.LiveTarget
+	tabsByHandle map[int64][]domain.BrowserTab
+	liveResult   domain.CaptureResult
+	liveErr      error
+	lastLiveReq  domain.LiveCaptureRequest
 }
 
 func (f *fakeStudio) ListTargets(_ context.Context) ([]domain.LiveTarget, error) {

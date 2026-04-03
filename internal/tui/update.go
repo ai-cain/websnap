@@ -1,8 +1,6 @@
 ﻿package tui
 
 import (
-	"strconv"
-
 	"github.com/ai-cain/websnap/internal/domain"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -27,12 +25,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.enterTargetSelection()
 		if msg.err != nil {
 			m.lastErr = msg.err
-			m.targets = []targetMenuItem{newURLMenuItem()}
+			m.targets = nil
 			m.targetIndex = 0
 			return m, nil
 		}
 
-		m.targets = []targetMenuItem{newURLMenuItem()}
+		m.targets = nil
 		for _, target := range msg.targets {
 			m.targets = append(m.targets, newLiveTargetMenuItem(target))
 		}
@@ -99,8 +97,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTabSelectionKey(msg)
 	case screenLiveOptions:
 		return m.handleLiveOptionsKey(msg)
-	case screenURLForm:
-		return m.handleURLFormKey(msg)
 	default:
 		return m, nil
 	}
@@ -165,7 +161,7 @@ func (m Model) handleLiveOptionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		req, err := m.buildLiveRequest()
 		if err != nil {
-			m.lastErr = friendlyInputError(err)
+			m.lastErr = err
 			return m, nil
 		}
 
@@ -173,33 +169,6 @@ func (m Model) handleLiveOptionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	default:
 		return m.updateFocusedInput(msg)
 	}
-}
-
-func (m Model) handleURLFormKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "ctrl+c":
-		return m, tea.Quit
-	case "esc":
-		m.enterTargetSelection()
-		return m, nil
-	case "tab", "shift+tab", "up", "down":
-		m.moveFocus(msg.String())
-		return m, nil
-	case "left", "h":
-		if m.focus == fieldMode {
-			m.mode = m.mode.previous()
-			return m, nil
-		}
-	case "right", "l":
-		if m.focus == fieldMode {
-			m.mode = m.mode.next()
-			return m, nil
-		}
-	case "enter":
-		return m.submitOrAdvanceURLForm()
-	}
-
-	return m.updateFocusedInput(msg)
 }
 
 func (m *Model) moveTargetSelection(delta int) {
@@ -240,23 +209,14 @@ func (m Model) selectCurrentTarget() (tea.Model, tea.Cmd) {
 	m.tabs = nil
 	m.tabIndex = 0
 	m.hasSelectedTab = false
-
-	switch selected.kind {
-	case menuItemURL:
-		m.enterURLForm()
-		return m, textinput.Blink
-	case menuItemLiveTarget:
-		m.selectedTarget = selected.target
-		m.hasSelectedTarget = true
-		if selected.target.Type == domain.LiveTargetBrowser && selected.target.CanListTabs {
-			return m.loadTabsForSelectedTarget()
-		}
-
-		m.enterLiveOptions()
-		return m, textinput.Blink
-	default:
-		return m, nil
+	m.selectedTarget = selected.target
+	m.hasSelectedTarget = true
+	if selected.target.Type == domain.LiveTargetBrowser && selected.target.CanListTabs {
+		return m.loadTabsForSelectedTarget()
 	}
+
+	m.enterLiveOptions()
+	return m, textinput.Blink
 }
 
 func (m Model) reloadTargets() (tea.Model, tea.Cmd) {
@@ -274,102 +234,16 @@ func (m Model) submitLiveCapture(req domain.LiveCaptureRequest) (tea.Model, tea.
 	return m, submitLiveCaptureCmd(m.studio, req)
 }
 
-func (m Model) submitOrAdvanceURLForm() (tea.Model, tea.Cmd) {
-	if m.focus < fieldOut {
-		next := m.focus + 1
-		next = m.normalizeField(next)
-		for !m.isFocusableField(next) {
-			next = m.normalizeField(next + 1)
-		}
-
-		m.setFocus(next)
-		return m, nil
-	}
-
-	req, err := m.buildRequest()
-	if err != nil {
-		m.lastErr = friendlyInputError(err)
-		return m, nil
-	}
-
-	m.startBusy("Capturing a fresh reproducible URL snapshot…")
-	return m, submitURLCaptureCmd(m.studio, req)
-}
-
 func (m Model) updateFocusedInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.phase != phaseEditing {
 		return m, nil
 	}
 
-	switch m.screen {
-	case screenLiveOptions:
-		var cmd tea.Cmd
-		m.liveOut, cmd = m.liveOut.Update(msg)
-		return m, cmd
-	case screenURLForm:
-		idx := inputIndex(m.focus)
-		if idx < 0 {
-			return m, nil
-		}
-
-		var cmd tea.Cmd
-		m.urlInputs[idx], cmd = m.urlInputs[idx].Update(msg)
-		return m, cmd
-	default:
+	if m.screen != screenLiveOptions {
 		return m, nil
 	}
+
+	var cmd tea.Cmd
+	m.liveOut, cmd = m.liveOut.Update(msg)
+	return m, cmd
 }
-
-func (m *Model) moveFocus(key string) {
-	next := m.focus
-	if key == "shift+tab" || key == "up" {
-		next--
-	} else {
-		next++
-	}
-
-	next = m.normalizeField(next)
-	for !m.isFocusableField(next) {
-		if key == "shift+tab" || key == "up" {
-			next = m.normalizeField(next - 1)
-			continue
-		}
-
-		next = m.normalizeField(next + 1)
-	}
-
-	m.setFocus(next)
-}
-
-func (m Model) isFocusableField(field int) bool {
-	if field != fieldSelector {
-		return true
-	}
-
-	return m.mode == modeSelector
-}
-
-func (m Model) normalizeField(field int) int {
-	if field < fieldURL {
-		return fieldOut
-	}
-
-	if field > fieldOut {
-		return fieldURL
-	}
-
-	return field
-}
-
-func friendlyInputError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	if _, convErr := strconv.ParseInt(err.Error(), 10, 64); convErr == nil {
-		return err
-	}
-
-	return err
-}
-

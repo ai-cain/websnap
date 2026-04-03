@@ -9,7 +9,7 @@ import (
 
 type targetsLoadedMsg struct {
 	targets []domain.LiveTarget
-	err    error
+	err     error
 }
 
 type tabsLoadedMsg struct {
@@ -37,17 +37,9 @@ func loadTabsCmd(studio Studio, target domain.LiveTarget) tea.Cmd {
 	}
 }
 
-func submitURLCaptureCmd(studio Studio, req domain.CaptureRequest) tea.Cmd {
-	return func() tea.Msg {
-		result, err := studio.CaptureURL(context.Background(), req)
-		return captureCompletedMsg{result: result, err: err}
-	}
-}
-
 func submitLiveCaptureCmd(studio Studio, req domain.LiveCaptureRequest) tea.Cmd {
 	return func() tea.Msg {
 		result, err := studio.CaptureLive(context.Background(), req)
 		return captureCompletedMsg{result: result, err: err}
 	}
 }
-
