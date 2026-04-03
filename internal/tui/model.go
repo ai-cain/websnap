@@ -251,7 +251,12 @@ func (m Model) groupGridColumns() int {
 		return 1
 	}
 
-	if contentWidth(m.width) >= 88 {
+	available := contentWidth(m.width)
+	if available >= 138 && len(m.groups) >= 3 {
+		return 3
+	}
+
+	if available >= 88 {
 		return 2
 	}
 

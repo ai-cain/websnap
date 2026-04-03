@@ -137,6 +137,38 @@ func TestGroupSelectionRendersNestedCards(t *testing.T) {
 	}
 }
 
+func TestGroupGridColumnsRespondToWidth(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.groups = []groupMenuItem{
+		{title: "Chrome"},
+		{title: "Antigravity"},
+		{title: "Explorer"},
+		{title: "Settings"},
+		{title: "Terminal"},
+	}
+
+	tests := []struct {
+		name  string
+		width int
+		want  int
+	}{
+		{name: "narrow", width: 80, want: 1},
+		{name: "medium", width: 120, want: 2},
+		{name: "wide", width: 180, want: 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model.width = tt.width
+			if got := model.groupGridColumns(); got != tt.want {
+				t.Fatalf("groupGridColumns() = %d, want %d for width %d", got, tt.want, tt.width)
+			}
+		})
+	}
+}
+
 type fakeStudio struct {
 	targets      []domain.LiveTarget
 	tabsByHandle map[int64][]domain.BrowserTab

@@ -28,24 +28,26 @@ func newStyles() styles {
 	basePanel := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#334155")).
+		Background(lipgloss.Color("#020617")).
 		Padding(1, 2)
 
 	choiceCard := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#334155")).
-		Padding(1, 2).
+		Background(lipgloss.Color("#0F172A")).
+		Padding(0, 1).
 		MarginRight(1).
-		MarginBottom(1)
+		MarginBottom(0)
 
 	choiceCardFocused := choiceCard.
 		BorderForeground(lipgloss.Color("#22D3EE")).
-		Background(lipgloss.Color("#082F49"))
+		Background(lipgloss.Color("#0C4A6E"))
 
 	return styles{
-		frame:             lipgloss.NewStyle().Padding(1, 2),
+		frame:             lipgloss.NewStyle().Background(lipgloss.Color("#020617")).Padding(1, 2),
 		panel:             basePanel,
-		field:             lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#1E293B")).PaddingLeft(1),
-		fieldFocused:      lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#06B6D4")).PaddingLeft(1),
+		field:             lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#1E293B")).Background(lipgloss.Color("#020617")).PaddingLeft(1),
+		fieldFocused:      lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#06B6D4")).Background(lipgloss.Color("#082F49")).PaddingLeft(1),
 		choiceCard:        choiceCard,
 		choiceCardFocused: choiceCardFocused,
 		badge:             lipgloss.NewStyle().Foreground(lipgloss.Color("#0F172A")).Background(lipgloss.Color("#22D3EE")).Bold(true).Padding(0, 1),

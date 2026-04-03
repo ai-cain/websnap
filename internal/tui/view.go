@@ -267,8 +267,12 @@ func (m Model) renderFooter() string {
 
 func contentWidth(total int) int {
 	switch {
+	case total >= 160:
+		return 148
+	case total >= 128:
+		return total - 8
 	case total >= 92:
-		return 88
+		return total - 6
 	case total >= 74:
 		return total - 4
 	default:
@@ -277,11 +281,12 @@ func contentWidth(total int) int {
 }
 
 func (m Model) groupCardWidth() int {
-	if m.groupGridColumns() <= 1 {
+	columns := m.groupGridColumns()
+	if columns <= 1 {
 		return max(40, contentWidth(m.width)-8)
 	}
 
-	return max(26, (contentWidth(m.width)-12)/2)
+	return max(24, (contentWidth(m.width)-(columns*2+2))/columns)
 }
 
 func renderGrid(items []string, columns int) string {
