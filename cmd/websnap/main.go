@@ -6,6 +6,7 @@ import (
 	"time"
 
 	chromedpadapter "github.com/ai-cain/websnap/internal/adapter/browser/chromedp"
+	livewindowsadapter "github.com/ai-cain/websnap/internal/adapter/live/windows"
 	filesystemwriter "github.com/ai-cain/websnap/internal/adapter/writer/filesystem"
 	"github.com/ai-cain/websnap/internal/cli"
 	"github.com/ai-cain/websnap/internal/orchestrator"
@@ -18,13 +19,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	writer := filesystemwriter.New()
+	liveDesktop := livewindowsadapter.New()
+
 	runner := orchestrator.NewCaptureScreenshot(
 		chromedpadapter.New(),
-		filesystemwriter.New(),
+		writer,
 		workingDir,
 		time.Now,
 	)
 
-	app := cli.NewAppWithInput(runner, os.Stdin, os.Stdout, os.Stderr)
+	liveRunner := orchestrator.NewCaptureLiveTarget(
+		liveDesktop,
+		writer,
+		workingDir,
+		time.Now,
+	)
+
+	studio := cli.NewInteractiveStudio(runner, liveDesktop, liveRunner)
+
+	app := cli.NewAppWithInput(runner, studio, os.Stdin, os.Stdout, os.Stderr)
 	os.Exit(app.Run(os.Args[1:]))
 }

@@ -1,29 +1,33 @@
-package cli
+﻿package cli
 
 import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/ai-cain/websnap/internal/tui"
 )
 
 type App struct {
 	shotRunner ShotRunner
+	studio     tui.Studio
 	stdin      io.Reader
 	stdout     io.Writer
 	stderr     io.Writer
 	ui         interactiveUI
 }
 
-func NewApp(shotRunner ShotRunner, stdout, stderr io.Writer) App {
-	return NewAppWithInput(shotRunner, nil, stdout, stderr)
+func NewApp(shotRunner ShotRunner, studio tui.Studio, stdout, stderr io.Writer) App {
+	return NewAppWithInput(shotRunner, studio, nil, stdout, stderr)
 }
 
-func NewAppWithInput(shotRunner ShotRunner, stdin io.Reader, stdout, stderr io.Writer) App {
-	return newAppWithDeps(shotRunner, stdin, stdout, stderr, newTUIBridge())
+func NewAppWithInput(shotRunner ShotRunner, studio tui.Studio, stdin io.Reader, stdout, stderr io.Writer) App {
+	return newAppWithDeps(shotRunner, studio, stdin, stdout, stderr, newTUIBridge())
 }
 
 func newAppWithDeps(
 	shotRunner ShotRunner,
+	studio tui.Studio,
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 	ui interactiveUI,
@@ -42,6 +46,7 @@ func newAppWithDeps(
 
 	return App{
 		shotRunner: shotRunner,
+		studio:     studio,
 		stdin:      stdin,
 		stdout:     stdout,
 		stderr:     stderr,
@@ -51,7 +56,7 @@ func newAppWithDeps(
 
 func (a App) Run(args []string) int {
 	if len(args) == 0 {
-		cmd := newInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr, a.ui)
+		cmd := newInteractiveCommand(a.studio, a.stdin, a.stdout, a.stderr, a.ui)
 		return cmd.Run()
 	}
 
@@ -60,7 +65,7 @@ func (a App) Run(args []string) int {
 		a.printUsage()
 		return 0
 	case "interactive":
-		cmd := newInteractiveCommand(a.shotRunner, a.stdin, a.stdout, a.stderr, a.ui)
+		cmd := newInteractiveCommand(a.studio, a.stdin, a.stdout, a.stderr, a.ui)
 		return cmd.Run()
 	case "shot":
 		cmd := NewShotCommand(a.shotRunner, a.stdout, a.stderr)
@@ -80,3 +85,4 @@ func (a App) printUsage() {
 	fmt.Fprintln(a.stderr, "  websnap interactive")
 	fmt.Fprintln(a.stderr, "  websnap shot <url> [--width <px>] [--height <px>] [--out <path>]")
 }
+

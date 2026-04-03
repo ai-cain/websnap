@@ -1,29 +1,31 @@
-package cli
+﻿package cli
 
 import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/ai-cain/websnap/internal/tui"
 )
 
 type interactiveUI interface {
-	Run(input io.Reader, output io.Writer, runner ShotRunner) error
+	Run(input io.Reader, output io.Writer, studio tui.Studio) error
 }
 
 type InteractiveCommand struct {
-	runner ShotRunner
+	studio tui.Studio
 	input  io.Reader
 	stdout io.Writer
 	stderr io.Writer
 	ui     interactiveUI
 }
 
-func NewInteractiveCommand(runner ShotRunner, input io.Reader, stdout, stderr io.Writer) InteractiveCommand {
-	return newInteractiveCommand(runner, input, stdout, stderr, newTUIBridge())
+func NewInteractiveCommand(studio tui.Studio, input io.Reader, stdout, stderr io.Writer) InteractiveCommand {
+	return newInteractiveCommand(studio, input, stdout, stderr, newTUIBridge())
 }
 
 func newInteractiveCommand(
-	runner ShotRunner,
+	studio tui.Studio,
 	input io.Reader,
 	stdout, stderr io.Writer,
 	ui interactiveUI,
@@ -41,7 +43,7 @@ func newInteractiveCommand(
 	}
 
 	return InteractiveCommand{
-		runner: runner,
+		studio: studio,
 		input:  input,
 		stdout: stdout,
 		stderr: stderr,
@@ -50,8 +52,8 @@ func newInteractiveCommand(
 }
 
 func (c InteractiveCommand) Run() int {
-	if c.runner == nil {
-		fmt.Fprintln(c.stderr, "error: interactive runner is not configured")
+	if c.studio == nil {
+		fmt.Fprintln(c.stderr, "error: interactive studio is not configured")
 		return 1
 	}
 
@@ -60,10 +62,11 @@ func (c InteractiveCommand) Run() int {
 		return 1
 	}
 
-	if err := c.ui.Run(c.input, c.stdout, c.runner); err != nil {
+	if err := c.ui.Run(c.input, c.stdout, c.studio); err != nil {
 		renderError(c.stderr, err)
 		return 1
 	}
 
 	return 0
 }
+

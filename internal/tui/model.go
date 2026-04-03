@@ -1,8 +1,10 @@
-package tui
+﻿package tui
 
 import (
+	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/ai-cain/websnap/internal/domain"
 	apperrors "github.com/ai-cain/websnap/internal/support/errors"
@@ -24,29 +26,67 @@ type phase int
 
 const (
 	phaseEditing phase = iota
-	phaseCapturing
+	phaseBusy
 	phaseSuccess
 )
 
+type screen int
+
+const (
+	screenTargetSelect screen = iota
+	screenTabSelect
+	screenLiveOptions
+	screenURLForm
+)
+
+type menuItemKind int
+
+const (
+	menuItemURL menuItemKind = iota
+	menuItemLiveTarget
+)
+
+type targetMenuItem struct {
+	kind   menuItemKind
+	title  string
+	detail string
+	target domain.LiveTarget
+}
+
 type Model struct {
-	runner     ShotRunner
-	inputs     []textinput.Model
-	focus      int
-	mode       captureMode
-	phase      phase
-	spinner    spinner.Model
-	styles     styles
-	width      int
-	height     int
+	studio Studio
+
+	urlInputs []textinput.Model
+	liveOut   textinput.Model
+	focus     int
+	mode      captureMode
+	phase     phase
+	screen    screen
+
+	spinner   spinner.Model
+	styles    styles
+	width     int
+	height    int
+	busyLabel string
+
 	lastErr    error
 	lastPath   string
 	lastWidth  int64
 	lastHeight int64
+
+	targets          []targetMenuItem
+	targetIndex      int
+	tabs             []domain.BrowserTab
+	tabIndex         int
+	selectedTarget   domain.LiveTarget
+	hasSelectedTarget bool
+	selectedTab      domain.BrowserTab
+	hasSelectedTab   bool
 }
 
-func NewModel(runner ShotRunner) Model {
+func NewModel(studio Studio) Model {
 	s := newStyles()
-	inputs := []textinput.Model{
+	urlInputs := []textinput.Model{
 		newInput("https://example.com", "", s),
 		newInput("", "1440", s),
 		newInput("", "900", s),
@@ -54,47 +94,56 @@ func NewModel(runner ShotRunner) Model {
 		newInput("./captures/home.png", "", s),
 	}
 
+	liveOut := newInput("./captures/live-target.png", "", s)
+
 	spin := spinner.New()
 	spin.Spinner = spinner.Dot
 	spin.Style = s.accent
 
 	model := Model{
-		runner:  runner,
-		inputs:  inputs,
-		mode:    modeViewport,
-		spinner: spin,
-		styles:  s,
+		studio:     studio,
+		urlInputs:  urlInputs,
+		liveOut:    liveOut,
+		mode:       modeViewport,
+		spinner:    spin,
+		styles:     s,
+		screen:     screenTargetSelect,
+		phase:      phaseBusy,
+		busyLabel:  "Discovering open apps, folders, and browser windows…",
+		targets:    []targetMenuItem{newURLMenuItem()},
+		targetIndex: 0,
 	}
 
-	model.setFocus(fieldURL)
+	model.blurURLInputs()
+	model.blurLiveInput()
 	return model
 }
 
 func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+	return loadTargetsCmd(m.studio)
 }
 
 func (m Model) buildRequest() (domain.CaptureRequest, error) {
-	width, err := strconv.ParseInt(m.inputs[inputIndex(fieldWidth)].Value(), 10, 64)
+	width, err := strconv.ParseInt(m.urlInputs[inputIndex(fieldWidth)].Value(), 10, 64)
 	if err != nil {
 		return domain.CaptureRequest{}, err
 	}
 
-	height, err := strconv.ParseInt(m.inputs[inputIndex(fieldHeight)].Value(), 10, 64)
+	height, err := strconv.ParseInt(m.urlInputs[inputIndex(fieldHeight)].Value(), 10, 64)
 	if err != nil {
 		return domain.CaptureRequest{}, err
 	}
 
 	req := domain.CaptureRequest{
-		URL:    m.inputs[inputIndex(fieldURL)].Value(),
+		URL:    m.urlInputs[inputIndex(fieldURL)].Value(),
 		Width:  width,
 		Height: height,
-		Out:    m.inputs[inputIndex(fieldOut)].Value(),
+		Out:    m.urlInputs[inputIndex(fieldOut)].Value(),
 	}
 
 	switch m.mode {
 	case modeSelector:
-		req.Selector = m.inputs[inputIndex(fieldSelector)].Value()
+		req.Selector = m.urlInputs[inputIndex(fieldSelector)].Value()
 		if strings.TrimSpace(req.Selector) == "" {
 			return domain.CaptureRequest{}, apperrors.New(apperrors.CodeInvalidArgument, "selector is required in selector mode")
 		}
@@ -105,8 +154,28 @@ func (m Model) buildRequest() (domain.CaptureRequest, error) {
 	return req, req.Validate()
 }
 
+func (m Model) buildLiveRequest() (domain.LiveCaptureRequest, error) {
+	if !m.hasSelectedTarget {
+		return domain.LiveCaptureRequest{}, apperrors.New(apperrors.CodeInvalidArgument, "live target is required")
+	}
+
+	req := domain.LiveCaptureRequest{
+		Target:   m.selectedTarget,
+		TabIndex: -1,
+		Out:      m.liveOut.Value(),
+	}
+
+	if m.hasSelectedTab {
+		req.TabIndex = m.selectedTab.Index
+	}
+
+	return req, req.Validate()
+}
+
 func (m *Model) setFocus(field int) {
 	m.focus = field
+	m.liveOut.Blur()
+	m.liveOut.PromptStyle = m.styles.muted
 
 	for current := fieldURL; current <= fieldOut; current++ {
 		idx := inputIndex(current)
@@ -115,14 +184,37 @@ func (m *Model) setFocus(field int) {
 		}
 
 		if current == field {
-			m.inputs[idx].Focus()
-			m.inputs[idx].PromptStyle = m.styles.focusedPrompt
+			m.urlInputs[idx].Focus()
+			m.urlInputs[idx].PromptStyle = m.styles.focusedPrompt
 			continue
 		}
 
-		m.inputs[idx].Blur()
-		m.inputs[idx].PromptStyle = m.styles.muted
+		m.urlInputs[idx].Blur()
+		m.urlInputs[idx].PromptStyle = m.styles.muted
 	}
+}
+
+func (m *Model) blurURLInputs() {
+	for idx := range m.urlInputs {
+		m.urlInputs[idx].Blur()
+		m.urlInputs[idx].PromptStyle = m.styles.muted
+	}
+}
+
+func (m *Model) focusLiveInput() {
+	m.blurURLInputs()
+	m.liveOut.Focus()
+	m.liveOut.PromptStyle = m.styles.focusedPrompt
+	if strings.TrimSpace(m.liveOut.Value()) == "" {
+		m.liveOut.SetValue(suggestLiveOutputPath(m.selectedTarget, m.selectedTab, m.hasSelectedTab))
+	}
+	m.liveOut.CursorEnd()
+}
+
+func (m *Model) blurLiveInput() {
+	m.liveOut.Blur()
+	m.liveOut.PromptStyle = m.styles.muted
+	m.liveOut.CursorEnd()
 }
 
 func (m *Model) setSuccess(result domain.CaptureResult) {
@@ -133,11 +225,48 @@ func (m *Model) setSuccess(result domain.CaptureResult) {
 	m.lastHeight = result.Height
 }
 
+func (m *Model) startBusy(label string) {
+	m.phase = phaseBusy
+	m.busyLabel = label
+	m.lastErr = nil
+}
+
+func (m *Model) enterTargetSelection() {
+	m.screen = screenTargetSelect
+	m.phase = phaseEditing
+	m.blurURLInputs()
+	m.blurLiveInput()
+}
+
+func (m *Model) enterURLForm() {
+	m.screen = screenURLForm
+	m.phase = phaseEditing
+	m.lastErr = nil
+	m.setFocus(fieldURL)
+}
+
+func (m *Model) enterLiveOptions() {
+	m.screen = screenLiveOptions
+	m.phase = phaseEditing
+	m.lastErr = nil
+	m.focusLiveInput()
+}
+
+func (m *Model) enterTabSelection(tabs []domain.BrowserTab) {
+	m.screen = screenTabSelect
+	m.phase = phaseEditing
+	m.tabs = tabs
+	m.tabIndex = selectedTabIndex(tabs)
+	m.lastErr = nil
+	m.blurURLInputs()
+	m.blurLiveInput()
+}
+
 func newInput(placeholder, value string, s styles) textinput.Model {
 	input := textinput.New()
 	input.Placeholder = placeholder
 	input.SetValue(value)
-	input.Prompt = "› "
+	input.Prompt = "> "
 	input.CharLimit = 256
 	input.Cursor.Style = s.accent
 	input.TextStyle = s.text
@@ -161,3 +290,100 @@ func inputIndex(field int) int {
 		return -1
 	}
 }
+
+func newURLMenuItem() targetMenuItem {
+	return targetMenuItem{
+		kind:   menuItemURL,
+		title:  "Open a fresh URL",
+		detail: "Use the original reproducible headless capture flow",
+	}
+}
+
+func newLiveTargetMenuItem(target domain.LiveTarget) targetMenuItem {
+	label := target.Title
+	if strings.TrimSpace(label) == "" {
+		label = target.AppName
+	}
+
+	detailParts := []string{strings.TrimSpace(target.AppName), string(target.Type)}
+	if target.Type == domain.LiveTargetBrowser && target.CanListTabs {
+		detailParts = append(detailParts, "tabs available")
+	}
+
+	return targetMenuItem{
+		kind:   menuItemLiveTarget,
+		title:  label,
+		detail: strings.Join(compactNonEmpty(detailParts), " • "),
+		target: target,
+	}
+}
+
+func selectedTabIndex(tabs []domain.BrowserTab) int {
+	for i, tab := range tabs {
+		if tab.Selected {
+			return i
+		}
+	}
+
+	return 0
+}
+
+func suggestLiveOutputPath(target domain.LiveTarget, tab domain.BrowserTab, hasTab bool) string {
+	name := target.Title
+	if hasTab && strings.TrimSpace(tab.Title) != "" {
+		name = tab.Title
+	}
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = target.AppName
+	}
+
+	name = sanitizeFileName(name)
+	if name == "" {
+		name = "live-target"
+	}
+
+	return filepath.Join("captures", name+".png")
+}
+
+func sanitizeFileName(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return ""
+	}
+
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range value {
+		switch {
+		case unicode.IsLetter(r), unicode.IsDigit(r):
+			builder.WriteRune(r)
+			lastDash = false
+		case r == '.', r == '-', r == '_':
+			builder.WriteRune(r)
+			lastDash = false
+		default:
+			if !lastDash {
+				builder.WriteRune('-')
+				lastDash = true
+			}
+		}
+	}
+
+	return strings.Trim(builder.String(), "-._")
+}
+
+func compactNonEmpty(values []string) []string {
+	compact := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		compact = append(compact, value)
+	}
+
+	return compact
+}
+

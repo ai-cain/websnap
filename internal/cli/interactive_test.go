@@ -27,7 +27,7 @@ func TestInteractiveCommandRun(t *testing.T) {
 			var stderr bytes.Buffer
 			ui := &fakeInteractiveUI{err: tt.uiErr}
 
-			cmd := newInteractiveCommand(&fakeShotRunner{}, bytes.NewBufferString(""), &stdout, &stderr, ui)
+			cmd := newInteractiveCommand(&fakeStudio{}, bytes.NewBufferString(""), &stdout, &stderr, ui)
 
 			exitCode := cmd.Run()
 			if exitCode != tt.wantExitCode {

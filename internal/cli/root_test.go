@@ -11,7 +11,7 @@ func TestAppRunUnknownCommand(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	app := newAppWithDeps(nil, nil, &stdout, &stderr, &fakeInteractiveUI{})
+	app := newAppWithDeps(nil, &fakeStudio{}, nil, &stdout, &stderr, &fakeInteractiveUI{})
 
 	exitCode := app.Run([]string{"unknown"})
 	if exitCode != 1 {
@@ -32,6 +32,7 @@ func TestAppRunWithoutArgsStartsInteractiveMode(t *testing.T) {
 
 	app := newAppWithDeps(
 		&fakeShotRunner{},
+		&fakeStudio{},
 		bytes.NewBufferString(""),
 		&stdout,
 		&stderr,

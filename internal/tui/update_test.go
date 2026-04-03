@@ -1,89 +1,139 @@
 package tui
 
 import (
-	"context"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestModelTabMovesFocus(t *testing.T) {
+func TestModelSelectsBrowserTargetAndShowsTabSelection(t *testing.T) {
 	t.Parallel()
 
-	model := NewModel(&fakeShotRunner{})
-	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyTab})
-	got := next.(Model)
+	studio := &fakeStudio{
+		tabsByHandle: map[int64][]domain.BrowserTab{
+			131584: {
+				{Index: 0, Title: "WhatsApp", Selected: true},
+				{Index: 1, Title: "YouTube", Selected: false},
+			},
+		},
+	}
 
-	if got.focus != fieldWidth {
-		t.Fatalf("focus = %d, want %d", got.focus, fieldWidth)
+	model := NewModel(studio)
+	model.phase = phaseEditing
+	model.targets = []targetMenuItem{
+		newURLMenuItem(),
+		newLiveTargetMenuItem(domain.LiveTarget{
+			WindowHandle: 131584,
+			Title:        "WhatsApp - Google Chrome",
+			AppName:      "chrome",
+			Type:         domain.LiveTargetBrowser,
+			CanListTabs:  true,
+		}),
+	}
+	model.targetIndex = 1
+
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	busy := next.(Model)
+	if busy.phase != phaseBusy {
+		t.Fatalf("phase = %d, want %d", busy.phase, phaseBusy)
+	}
+
+	msg := cmd()
+	final, _ := busy.Update(msg)
+	got := final.(Model)
+
+	if got.screen != screenTabSelect {
+		t.Fatalf("screen = %d, want %d", got.screen, screenTabSelect)
+	}
+
+	if len(got.tabs) != 2 {
+		t.Fatalf("len(tabs) = %d, want 2", len(got.tabs))
 	}
 }
 
-func TestModelCanCycleCaptureMode(t *testing.T) {
+func TestModelSingleBrowserTabAutoAdvancesToLiveOptions(t *testing.T) {
 	t.Parallel()
 
-	model := NewModel(&fakeShotRunner{})
-	model.setFocus(fieldMode)
-
-	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyRight})
-	selector := next.(Model)
-	if selector.mode != modeSelector {
-		t.Fatalf("mode = %v, want %v", selector.mode, modeSelector)
+	studio := &fakeStudio{
+		tabsByHandle: map[int64][]domain.BrowserTab{
+			131584: {
+				{Index: 0, Title: "WhatsApp", Selected: true},
+			},
+		},
 	}
 
-	next, _ = selector.Update(tea.KeyMsg{Type: tea.KeyRight})
-	fullPage := next.(Model)
-	if fullPage.mode != modeFullPage {
-		t.Fatalf("mode = %v, want %v", fullPage.mode, modeFullPage)
+	model := NewModel(studio)
+	model.phase = phaseEditing
+	model.targets = []targetMenuItem{
+		newURLMenuItem(),
+		newLiveTargetMenuItem(domain.LiveTarget{
+			WindowHandle: 131584,
+			Title:        "WhatsApp - Google Chrome",
+			AppName:      "chrome",
+			Type:         domain.LiveTargetBrowser,
+			CanListTabs:  true,
+		}),
+	}
+	model.targetIndex = 1
+
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	busy := next.(Model)
+	msg := cmd()
+	final, _ := busy.Update(msg)
+	got := final.(Model)
+
+	if got.screen != screenLiveOptions {
+		t.Fatalf("screen = %d, want %d", got.screen, screenLiveOptions)
+	}
+
+	if !got.hasSelectedTab || got.selectedTab.Index != 0 {
+		t.Fatalf("selectedTab = %#v, want first tab auto-selected", got.selectedTab)
 	}
 }
 
-func TestModelEnterOnLastFieldTransitionsToSuccess(t *testing.T) {
+func TestModelEnterOnLiveOptionsTransitionsToSuccess(t *testing.T) {
 	t.Parallel()
 
-	runner := &fakeShotRunner{
-		result: domain.CaptureResult{Path: "C:/captures/home.png", Width: 1440, Height: 900},
+	studio := &fakeStudio{
+		liveResult: domain.CaptureResult{
+			Path:   "C:/captures/live.png",
+			Width:  1550,
+			Height: 830,
+		},
 	}
 
-	model := NewModel(runner)
-	model.inputs[inputIndex(fieldURL)].SetValue("https://example.com")
-	model.inputs[inputIndex(fieldWidth)].SetValue("1440")
-	model.inputs[inputIndex(fieldHeight)].SetValue("900")
-	model.inputs[inputIndex(fieldOut)].SetValue("captures/home.png")
-	model.setFocus(fieldOut)
+	model := NewModel(studio)
+	model.phase = phaseEditing
+	model.screen = screenLiveOptions
+	model.selectedTarget = domain.LiveTarget{
+		WindowHandle: 1312510,
+		Title:        "portfolio - Explorador de archivos",
+		AppName:      "explorer",
+		Type:         domain.LiveTargetFolder,
+	}
+	model.hasSelectedTarget = true
+	model.liveOut.SetValue("captures/live.png")
 
-	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	capturing := next.(Model)
-
-	if capturing.phase != phaseCapturing {
-		t.Fatalf("phase = %d, want %d", capturing.phase, phaseCapturing)
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	busy := next.(Model)
+	if busy.phase != phaseBusy {
+		t.Fatalf("phase = %d, want %d", busy.phase, phaseBusy)
 	}
 
-	msg := submitCaptureCmd(runner, domain.CaptureRequest{
-		URL:    "https://example.com",
-		Width:  1440,
-		Height: 900,
-		Out:    "captures/home.png",
-	})()
-
-	final, _ := capturing.Update(msg)
+	msg := cmd()
+	final, _ := busy.Update(msg)
 	success := final.(Model)
 
 	if success.phase != phaseSuccess {
 		t.Fatalf("phase = %d, want %d", success.phase, phaseSuccess)
 	}
 
-	if success.lastPath != "C:/captures/home.png" {
-		t.Fatalf("lastPath = %q, want %q", success.lastPath, "C:/captures/home.png")
+	if success.lastPath != "C:/captures/live.png" {
+		t.Fatalf("lastPath = %q, want %q", success.lastPath, "C:/captures/live.png")
 	}
-}
 
-type fakeShotRunner struct {
-	result domain.CaptureResult
-	err    error
-}
-
-func (f *fakeShotRunner) Execute(_ context.Context, _ domain.CaptureRequest) (domain.CaptureResult, error) {
-	return f.result, f.err
+	if studio.lastLiveReq.Target.WindowHandle != 1312510 {
+		t.Fatalf("lastLiveReq = %#v, want selected live target handle", studio.lastLiveReq)
+	}
 }

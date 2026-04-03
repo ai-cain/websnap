@@ -1,42 +1,100 @@
 package tui
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestNewModelDefaults(t *testing.T) {
+func TestNewModelStartsInTargetSelection(t *testing.T) {
 	t.Parallel()
 
-	model := NewModel(&fakeShotRunner{})
+	model := NewModel(&fakeStudio{})
 
-	if model.focus != fieldURL {
-		t.Fatalf("focus = %d, want %d", model.focus, fieldURL)
+	if model.screen != screenTargetSelect {
+		t.Fatalf("screen = %d, want %d", model.screen, screenTargetSelect)
 	}
 
-	if model.inputs[inputIndex(fieldWidth)].Value() != "1440" {
-		t.Fatalf("width default = %q, want %q", model.inputs[inputIndex(fieldWidth)].Value(), "1440")
+	if model.phase != phaseBusy {
+		t.Fatalf("phase = %d, want %d", model.phase, phaseBusy)
 	}
 
-	if model.inputs[inputIndex(fieldHeight)].Value() != "900" {
-		t.Fatalf("height default = %q, want %q", model.inputs[inputIndex(fieldHeight)].Value(), "900")
+	if model.busyLabel == "" {
+		t.Fatal("busyLabel should describe target loading")
+	}
+}
+
+func TestModelLoadsTargetsIntoMenu(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+
+	next, _ := model.Update(targetsLoadedMsg{
+		targets: []domain.LiveTarget{
+			{
+				WindowHandle: 131584,
+				Title:        "WhatsApp - Google Chrome",
+				AppName:      "chrome",
+				Type:         domain.LiveTargetBrowser,
+				CanListTabs:  true,
+			},
+			{
+				WindowHandle: 1312510,
+				Title:        "portfolio - Explorador de archivos",
+				AppName:      "explorer",
+				Type:         domain.LiveTargetFolder,
+			},
+		},
+	})
+
+	got := next.(Model)
+	if got.phase != phaseEditing {
+		t.Fatalf("phase = %d, want %d", got.phase, phaseEditing)
 	}
 
-	if model.mode != modeViewport {
-		t.Fatalf("mode = %v, want %v", model.mode, modeViewport)
+	if len(got.targets) != 3 {
+		t.Fatalf("len(targets) = %d, want 3 including URL entry", len(got.targets))
+	}
+
+	if got.targets[0].kind != menuItemURL {
+		t.Fatalf("targets[0].kind = %d, want %d", got.targets[0].kind, menuItemURL)
+	}
+}
+
+func TestModelCanOpenURLFormFromTargetMenu(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.targets = []targetMenuItem{
+		newURLMenuItem(),
+	}
+
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := next.(Model)
+
+	if got.screen != screenURLForm {
+		t.Fatalf("screen = %d, want %d", got.screen, screenURLForm)
+	}
+
+	if cmd == nil {
+		t.Fatal("entering URL form should return a blink command")
 	}
 }
 
 func TestModelBuildRequest(t *testing.T) {
 	t.Parallel()
 
-	model := NewModel(&fakeShotRunner{})
-	model.inputs[inputIndex(fieldURL)].SetValue("https://example.com")
-	model.inputs[inputIndex(fieldWidth)].SetValue("1600")
-	model.inputs[inputIndex(fieldHeight)].SetValue("1000")
-	model.inputs[inputIndex(fieldSelector)].SetValue("#app")
-	model.inputs[inputIndex(fieldOut)].SetValue("captures/home.png")
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.screen = screenURLForm
+	model.urlInputs[inputIndex(fieldURL)].SetValue("https://example.com")
+	model.urlInputs[inputIndex(fieldWidth)].SetValue("1600")
+	model.urlInputs[inputIndex(fieldHeight)].SetValue("1000")
+	model.urlInputs[inputIndex(fieldSelector)].SetValue("#app")
+	model.urlInputs[inputIndex(fieldOut)].SetValue("captures/home.png")
 	model.mode = modeSelector
 
 	req, err := model.buildRequest()
@@ -57,21 +115,58 @@ func TestModelBuildRequest(t *testing.T) {
 	}
 }
 
-func TestModelBuildRequestForFullPage(t *testing.T) {
+func TestModelBuildLiveRequest(t *testing.T) {
 	t.Parallel()
 
-	model := NewModel(&fakeShotRunner{})
-	model.inputs[inputIndex(fieldURL)].SetValue("https://example.com")
-	model.inputs[inputIndex(fieldWidth)].SetValue("1600")
-	model.inputs[inputIndex(fieldHeight)].SetValue("1000")
-	model.mode = modeFullPage
+	model := NewModel(&fakeStudio{})
+	model.selectedTarget = domain.LiveTarget{
+		WindowHandle: 1312510,
+		Title:        "portfolio - Explorador de archivos",
+		AppName:      "explorer",
+		Type:         domain.LiveTargetFolder,
+	}
+	model.hasSelectedTarget = true
+	model.liveOut.SetValue("captures/folder.png")
 
-	req, err := model.buildRequest()
+	req, err := model.buildLiveRequest()
 	if err != nil {
-		t.Fatalf("buildRequest() error = %v", err)
+		t.Fatalf("buildLiveRequest() error = %v", err)
 	}
 
-	if !req.FullPage {
-		t.Fatal("request should use FullPage=true")
+	if req.Target.WindowHandle != 1312510 || req.Out != "captures/folder.png" || req.TabIndex != -1 {
+		t.Fatalf("request = %#v, want folder target with no tab and custom output", req)
 	}
+}
+
+type fakeStudio struct {
+	targets        []domain.LiveTarget
+	tabsByHandle   map[int64][]domain.BrowserTab
+	urlResult      domain.CaptureResult
+	liveResult     domain.CaptureResult
+	urlErr         error
+	liveErr        error
+	lastURLRequest domain.CaptureRequest
+	lastLiveReq    domain.LiveCaptureRequest
+}
+
+func (f *fakeStudio) CaptureURL(_ context.Context, req domain.CaptureRequest) (domain.CaptureResult, error) {
+	f.lastURLRequest = req
+	return f.urlResult, f.urlErr
+}
+
+func (f *fakeStudio) ListTargets(_ context.Context) ([]domain.LiveTarget, error) {
+	return f.targets, nil
+}
+
+func (f *fakeStudio) ListTabs(_ context.Context, target domain.LiveTarget) ([]domain.BrowserTab, error) {
+	if f.tabsByHandle == nil {
+		return nil, nil
+	}
+
+	return f.tabsByHandle[target.WindowHandle], nil
+}
+
+func (f *fakeStudio) CaptureLive(_ context.Context, req domain.LiveCaptureRequest) (domain.CaptureResult, error) {
+	f.lastLiveReq = req
+	return f.liveResult, f.liveErr
 }
