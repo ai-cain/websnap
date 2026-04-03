@@ -79,13 +79,19 @@ func (m Model) renderGroupSelection() string {
 	blocks := make([]string, 0, len(m.groups))
 	for i, item := range m.groups {
 		style := m.styles.field
+		titleStyle := m.styles.label
+		prefix := "  "
 		if i == m.groupIndex {
-			style = m.styles.fieldFocused
+			style = m.styles.fieldFocused.
+				Background(lipgloss.Color("#083344")).
+				Padding(0, 1)
+			titleStyle = m.styles.accent.Bold(true)
+			prefix = "▶ "
 		}
 
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.styles.label.Render(item.title),
+			titleStyle.Render(prefix + item.title),
 			m.styles.muted.Render(item.detail),
 		)
 		blocks = append(blocks, style.Width(m.groupCardWidth()).Render(content))
@@ -102,6 +108,8 @@ func (m Model) renderGroupSelection() string {
 			m.styles.label.Render("Select the app group"),
 			m.styles.muted.Render("Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
 			body,
+			"",
+			m.styles.accent.Render("Selected: "+m.currentGroupTitle()),
 		),
 	)
 }
@@ -236,7 +244,7 @@ func (m Model) instructionsForCurrentScreen() string {
 	case screenLiveOptions:
 		return "Type output path • Enter capture current state • Esc back • Ctrl+C quit"
 	default:
-		return "↑/↓ choose group • Enter open group • R reload • Ctrl+C quit"
+		return "↑/↓/←/→ choose group • Enter open group • R reload • Ctrl+C quit"
 	}
 }
 
@@ -296,4 +304,12 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func (m Model) currentGroupTitle() string {
+	if len(m.groups) == 0 || m.groupIndex < 0 || m.groupIndex >= len(m.groups) {
+		return "none"
+	}
+
+	return m.groups[m.groupIndex].title
 }

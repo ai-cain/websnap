@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
@@ -104,6 +105,18 @@ func TestModelBuildLiveRequest(t *testing.T) {
 
 	if req.Target.WindowHandle != 1312510 || req.Out != "captures/folder.png" || req.TabIndex != -1 {
 		t.Fatalf("request = %#v, want folder target with no tab and custom output", req)
+	}
+}
+
+func TestGroupSelectionInstructionsMentionAllArrows(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.screen = screenGroupSelect
+
+	got := model.instructionsForCurrentScreen()
+	if !strings.Contains(got, "←/→") {
+		t.Fatalf("instructions = %q, want to mention ←/→", got)
 	}
 }
 
