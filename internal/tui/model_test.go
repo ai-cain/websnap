@@ -120,6 +120,23 @@ func TestGroupSelectionInstructionsMentionAllArrows(t *testing.T) {
 	}
 }
 
+func TestGroupSelectionRendersNestedCards(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.width = 140
+	model.groups = []groupMenuItem{
+		{title: "Chrome", detail: "1 ventana • navegador"},
+		{title: "Antigravity", detail: "3 ventanas • app"},
+	}
+
+	view := model.renderGroupSelection()
+	if strings.Count(view, "╭") < 2 {
+		t.Fatalf("group selection should render nested cards, got view:\n%s", view)
+	}
+}
+
 type fakeStudio struct {
 	targets      []domain.LiveTarget
 	tabsByHandle map[int64][]domain.BrowserTab
