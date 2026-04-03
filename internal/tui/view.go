@@ -15,7 +15,7 @@ func (m Model) View() string {
 		m.renderFooter(),
 	)
 
-	return m.styles.frame.Width(contentWidth(m.width)).Render(content)
+	return m.styles.frame.Render(content)
 }
 
 func (m Model) renderHeader() string {
@@ -26,8 +26,15 @@ func (m Model) renderHeader() string {
 		m.styles.title.Render("Interactive Capture Studio"),
 	)
 
+	ruleWidth := max(18, min(72, contentWidth(m.width)-2))
 	subtitle := m.styles.muted.Render("Choose an app group first, then drill into windows and tabs only when needed")
-	return m.styles.panel.Render(lipgloss.JoinVertical(lipgloss.Left, title, subtitle))
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		subtitle,
+		m.styles.muted.Render(strings.Repeat("─", ruleWidth)),
+	)
 }
 
 func (m Model) renderBody() string {
@@ -67,12 +74,9 @@ func (m Model) renderEditingScreen() string {
 
 func (m Model) renderGroupSelection() string {
 	if len(m.groups) == 0 {
-		return m.styles.panel.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.label.Render("No open capture targets found"),
-				m.styles.muted.Render("Open a folder, app, or browser window first, then press R to refresh."),
-			),
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			m.renderSectionHeader("No open capture targets found", "Open a folder, app, or browser window first, then press R to refresh."),
 		)
 	}
 
@@ -86,26 +90,20 @@ func (m Model) renderGroupSelection() string {
 		body = renderGrid(blocks, m.groupGridColumns())
 	}
 
-	return m.styles.panel.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render("Select the app group"),
-			m.styles.muted.Render("Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
-			body,
-			"",
-			m.styles.accent.Render("Selected: "+m.currentGroupTitle()),
-		),
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.renderSectionHeader("Select the app group", "Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
+		body,
+		"",
+		m.styles.accent.Render("Selected: "+m.currentGroupTitle()),
 	)
 }
 
 func (m Model) renderTargetSelection() string {
 	if len(m.targets) == 0 {
-		return m.styles.panel.Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				m.styles.label.Render("This group has no visible windows"),
-				m.styles.muted.Render("Go back and choose another group, or press R to refresh from the main screen."),
-			),
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			m.renderSectionHeader("This group has no visible windows", "Go back and choose another group, or press R to refresh from the main screen."),
 		)
 	}
 
@@ -115,13 +113,10 @@ func (m Model) renderTargetSelection() string {
 		blocks = append(blocks, m.renderChoiceCard(item.title, item.detail, i == m.targetIndex, cardWidth))
 	}
 
-	return m.styles.panel.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render("Choose the window inside the selected group"),
-			m.styles.muted.Render(m.selectedGroup.title+" • "+m.selectedGroup.detail),
-			lipgloss.JoinVertical(lipgloss.Left, blocks...),
-		),
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.renderSectionHeader("Choose the window inside the selected group", m.selectedGroup.title+" • "+m.selectedGroup.detail),
+		lipgloss.JoinVertical(lipgloss.Left, blocks...),
 	)
 }
 
@@ -137,13 +132,10 @@ func (m Model) renderTabSelection() string {
 		blocks = append(blocks, m.renderChoiceCard(tab.Title, state, i == m.tabIndex, cardWidth))
 	}
 
-	return m.styles.panel.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render("Choose the already-open browser tab"),
-			m.styles.muted.Render(m.selectedTarget.Title),
-			lipgloss.JoinVertical(lipgloss.Left, blocks...),
-		),
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.renderSectionHeader("Choose the already-open browser tab", m.selectedTarget.Title),
+		lipgloss.JoinVertical(lipgloss.Left, blocks...),
 	)
 }
 
@@ -166,18 +158,20 @@ func (m Model) renderLiveOptions() string {
 		)
 	}
 
-	content := lipgloss.JoinVertical(
+	inputCardStyle := m.styles.choiceCardFocused
+	inputCard := inputCardStyle.Render(lipgloss.JoinVertical(
 		lipgloss.Left,
+		m.styles.label.Render("Output path"),
+		m.liveOut.View(),
+	))
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.renderSectionHeader("Capture the current live state", "Review the selected target and confirm the output path."),
 		lipgloss.JoinVertical(lipgloss.Left, summary...),
 		"",
-		m.styles.choiceCardFocused.Render(lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.styles.label.Render("Output path"),
-			m.liveOut.View(),
-		)),
+		inputCard,
 	)
-
-	return m.styles.panel.Render(content)
 }
 
 func (m Model) renderStatus() string {
@@ -225,6 +219,15 @@ func (m Model) renderFooter() string {
 	return m.styles.footer.Render(strings.Join(parts, "   "))
 }
 
+func (m Model) renderSectionHeader(title, subtitle string) string {
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.styles.label.Render(title),
+		m.styles.muted.Render(subtitle),
+		"",
+	)
+}
+
 func contentWidth(total int) int {
 	switch {
 	case total >= 160:
@@ -243,14 +246,14 @@ func contentWidth(total int) int {
 func (m Model) groupCardWidth() int {
 	columns := m.groupGridColumns()
 	if columns <= 1 {
-		return max(40, contentWidth(m.width)-8)
+		return max(32, contentWidth(m.width)-2)
 	}
 
-	return max(24, (contentWidth(m.width)-(columns*2+2))/columns)
+	return max(24, (contentWidth(m.width)-2)/columns)
 }
 
 func (m Model) selectionCardWidth() int {
-	return max(40, contentWidth(m.width)-8)
+	return max(32, contentWidth(m.width)-2)
 }
 
 func (m Model) renderChoiceCard(title, detail string, focused bool, width int) string {
@@ -263,8 +266,9 @@ func (m Model) renderChoiceCard(title, detail string, focused bool, width int) s
 		prefix = "▶ "
 	}
 
-	content := m.renderChoiceLine(prefix+title, detail, titleStyle, width)
-	return style.Width(width).Render(content)
+	innerWidth := max(12, width-style.GetHorizontalFrameSize())
+	content := m.renderChoiceLine(prefix+title, detail, titleStyle, innerWidth)
+	return style.Render(padVisibleWidth(content, innerWidth))
 }
 
 func (m Model) renderChoiceLine(title, detail string, titleStyle lipgloss.Style, width int) string {
@@ -276,13 +280,12 @@ func (m Model) renderChoiceLine(title, detail string, titleStyle lipgloss.Style,
 		)
 	}
 
-	innerWidth := max(12, width-2)
-	rightText := trimText(detail, max(10, innerWidth/3))
-	rightWidth := len([]rune(rightText))
-	leftMax := max(10, innerWidth-rightWidth-2)
+	rightText := trimText(detail, min(20, max(10, width/3)))
+	rightWidth := lipgloss.Width(rightText)
+	leftMax := max(10, width-rightWidth-2)
 	leftText := trimText(title, leftMax)
-	leftWidth := len([]rune(leftText))
-	gap := innerWidth - leftWidth - rightWidth
+	leftWidth := lipgloss.Width(leftText)
+	gap := width - leftWidth - rightWidth
 	if gap < 2 {
 		gap = 2
 	}
@@ -306,6 +309,15 @@ func trimText(text string, limit int) string {
 	return string(runes[:limit-1]) + "…"
 }
 
+func padVisibleWidth(text string, width int) string {
+	diff := width - lipgloss.Width(text)
+	if diff <= 0 {
+		return text
+	}
+
+	return text + strings.Repeat(" ", diff)
+}
+
 func renderGrid(items []string, columns int) string {
 	if columns <= 1 {
 		return lipgloss.JoinVertical(lipgloss.Left, items...)
@@ -317,7 +329,16 @@ func renderGrid(items []string, columns int) string {
 		if end > len(items) {
 			end = len(items)
 		}
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, items[start:end]...))
+
+		cells := make([]string, 0, end-start+columns-1)
+		for i, item := range items[start:end] {
+			if i > 0 {
+				cells = append(cells, "  ")
+			}
+			cells = append(cells, item)
+		}
+
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, cells...))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, rows...)
@@ -325,6 +346,13 @@ func renderGrid(items []string, columns int) string {
 
 func max(a, b int) int {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
 		return a
 	}
 	return b

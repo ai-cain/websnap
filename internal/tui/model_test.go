@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestNewModelStartsInGroupSelection(t *testing.T) {
@@ -120,7 +121,7 @@ func TestGroupSelectionInstructionsMentionAllArrows(t *testing.T) {
 	}
 }
 
-func TestGroupSelectionRendersNestedCards(t *testing.T) {
+func TestGroupSelectionRendersCards(t *testing.T) {
 	t.Parallel()
 
 	model := NewModel(&fakeStudio{})
@@ -132,8 +133,9 @@ func TestGroupSelectionRendersNestedCards(t *testing.T) {
 	}
 
 	view := model.renderGroupSelection()
-	if strings.Count(view, "╭") < 2 {
-		t.Fatalf("group selection should render nested cards, got view:\n%s", view)
+	borders := strings.Count(view, "┌") + strings.Count(view, "╭")
+	if borders < 2 {
+		t.Fatalf("group selection should render cards, got view:\n%s", view)
 	}
 }
 
@@ -177,6 +179,32 @@ func TestRenderChoiceCardKeepsSingleContentRow(t *testing.T) {
 
 	if strings.Count(card, "\n") != 2 {
 		t.Fatalf("renderChoiceCard() should stay compact with border-only height, got:\n%s", card)
+	}
+}
+
+func TestViewFitsWithinViewportWidth(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.width = 120
+	model.groups = []groupMenuItem{
+		{title: "Chrome", detail: "1 ventana • navegador"},
+		{title: "Explorador", detail: "1 ventana • carpeta"},
+		{title: "Antigravity", detail: "2 ventanas • app"},
+		{title: "Windows Host", detail: "1 ventana • app"},
+	}
+
+	view := model.View()
+	maxWidth := 0
+	for _, line := range strings.Split(view, "\n") {
+		if width := lipgloss.Width(line); width > maxWidth {
+			maxWidth = width
+		}
+	}
+
+	if maxWidth > model.width {
+		t.Fatalf("view width = %d, want <= viewport width %d\n%s", maxWidth, model.width, view)
 	}
 }
 

@@ -41,11 +41,10 @@ func newStyles() styles {
 		Padding(1, 2)
 
 	choiceCard := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(panelBorder).
 		Background(cardBackground).
-		Padding(0, 0).
-		MarginRight(1).
+		Padding(0, 1).
 		MarginBottom(0)
 
 	choiceCardFocused := choiceCard.
