@@ -210,11 +210,25 @@ func (m Model) renderFooter() string {
 		m.styles.muted.Render("confirm"),
 		m.styles.shortcut.Render("Tab"),
 		m.styles.muted.Render("next item"),
-		m.styles.shortcut.Render("Esc"),
-		m.styles.muted.Render("back"),
+	}
+
+	switch m.screen {
+	case screenTargetSelect, screenTabSelect, screenLiveOptions:
+		parts = append(parts,
+			m.styles.shortcut.Render("Esc"),
+			m.styles.muted.Render("back"),
+		)
+	default:
+		parts = append(parts,
+			m.styles.shortcut.Render("Esc"),
+			m.styles.muted.Render("quit"),
+		)
+	}
+
+	parts = append(parts,
 		m.styles.shortcut.Render("Ctrl+C"),
 		m.styles.muted.Render("quit"),
-	}
+	)
 
 	return m.styles.footer.Render(strings.Join(parts, "   "))
 }

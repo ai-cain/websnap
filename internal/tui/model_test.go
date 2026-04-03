@@ -182,6 +182,33 @@ func TestRenderChoiceCardKeepsSingleContentRow(t *testing.T) {
 	}
 }
 
+func TestRenderFooterShowsQuitOnTopLevel(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.screen = screenGroupSelect
+
+	footer := model.renderFooter()
+	if !strings.Contains(footer, "Esc") || !strings.Contains(footer, "quit") {
+		t.Fatalf("renderFooter() = %q, want Esc quit on top-level screen", footer)
+	}
+	if strings.Contains(footer, "Esc   back") {
+		t.Fatalf("renderFooter() = %q, should not advertise Esc back on top-level screen", footer)
+	}
+}
+
+func TestRenderFooterShowsBackOnNestedScreens(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.screen = screenTargetSelect
+
+	footer := model.renderFooter()
+	if !strings.Contains(footer, "Esc") || !strings.Contains(footer, "back") {
+		t.Fatalf("renderFooter() = %q, want Esc back on nested screen", footer)
+	}
+}
+
 func TestViewFitsWithinViewportWidth(t *testing.T) {
 	t.Parallel()
 
