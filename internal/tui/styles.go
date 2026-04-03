@@ -25,43 +25,52 @@ type styles struct {
 }
 
 func newStyles() styles {
+	baseBackground := lipgloss.Color("#14110F")
+	panelBorder := lipgloss.Color("#3B312A")
+	cardBackground := lipgloss.Color("#1B1714")
+	focusedBackground := lipgloss.Color("#2A211B")
+	accent := lipgloss.Color("#D4A574")
+	titleText := lipgloss.Color("#F5EFE6")
+	bodyText := lipgloss.Color("#E9DFD2")
+	mutedText := lipgloss.Color("#B9A999")
+
 	basePanel := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#334155")).
-		Background(lipgloss.Color("#020617")).
+		BorderForeground(panelBorder).
+		Background(baseBackground).
 		Padding(1, 2)
 
 	choiceCard := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#334155")).
-		Background(lipgloss.Color("#0F172A")).
-		Padding(0, 1).
+		BorderForeground(panelBorder).
+		Background(cardBackground).
+		Padding(0, 0).
 		MarginRight(1).
 		MarginBottom(0)
 
 	choiceCardFocused := choiceCard.
-		BorderForeground(lipgloss.Color("#22D3EE")).
-		Background(lipgloss.Color("#0C4A6E"))
+		BorderForeground(accent).
+		Background(focusedBackground)
 
 	return styles{
-		frame:             lipgloss.NewStyle().Background(lipgloss.Color("#020617")).Padding(1, 2),
+		frame:             lipgloss.NewStyle().Background(baseBackground).Padding(1, 2),
 		panel:             basePanel,
-		field:             lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#1E293B")).Background(lipgloss.Color("#020617")).PaddingLeft(1),
-		fieldFocused:      lipgloss.NewStyle().BorderLeft(true).BorderForeground(lipgloss.Color("#06B6D4")).Background(lipgloss.Color("#082F49")).PaddingLeft(1),
+		field:             lipgloss.NewStyle().BorderLeft(true).BorderForeground(panelBorder).Background(baseBackground).PaddingLeft(1),
+		fieldFocused:      lipgloss.NewStyle().BorderLeft(true).BorderForeground(accent).Background(focusedBackground).PaddingLeft(1),
 		choiceCard:        choiceCard,
 		choiceCardFocused: choiceCardFocused,
-		badge:             lipgloss.NewStyle().Foreground(lipgloss.Color("#0F172A")).Background(lipgloss.Color("#22D3EE")).Bold(true).Padding(0, 1),
-		title:             lipgloss.NewStyle().Foreground(lipgloss.Color("#E2E8F0")).Bold(true),
-		label:             lipgloss.NewStyle().Foreground(lipgloss.Color("#F8FAFC")).Bold(true),
-		text:              lipgloss.NewStyle().Foreground(lipgloss.Color("#E2E8F0")),
-		muted:             lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")),
-		accent:            lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")),
-		focusedPrompt:     lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")).Bold(true),
-		footer:            lipgloss.NewStyle().Foreground(lipgloss.Color("#CBD5E1")),
-		shortcut:          lipgloss.NewStyle().Foreground(lipgloss.Color("#C084FC")).Bold(true),
-		errorPanel:        basePanel.BorderForeground(lipgloss.Color("#EF4444")),
+		badge:             lipgloss.NewStyle().Foreground(baseBackground).Background(accent).Bold(true).Padding(0, 1),
+		title:             lipgloss.NewStyle().Foreground(titleText).Bold(true),
+		label:             lipgloss.NewStyle().Foreground(titleText).Bold(true),
+		text:              lipgloss.NewStyle().Foreground(bodyText),
+		muted:             lipgloss.NewStyle().Foreground(mutedText),
+		accent:            lipgloss.NewStyle().Foreground(accent),
+		focusedPrompt:     lipgloss.NewStyle().Foreground(accent).Bold(true),
+		footer:            lipgloss.NewStyle().Foreground(bodyText),
+		shortcut:          lipgloss.NewStyle().Foreground(accent).Bold(true),
+		errorPanel:        basePanel.BorderForeground(lipgloss.Color("#E57373")),
 		errorTitle:        lipgloss.NewStyle().Foreground(lipgloss.Color("#FCA5A5")).Bold(true),
-		successPanel:      basePanel.BorderForeground(lipgloss.Color("#22C55E")),
-		successTitle:      lipgloss.NewStyle().Foreground(lipgloss.Color("#86EFAC")).Bold(true),
+		successPanel:      basePanel.BorderForeground(lipgloss.Color("#7FB069")),
+		successTitle:      lipgloss.NewStyle().Foreground(lipgloss.Color("#B5D99C")).Bold(true),
 	}
 }

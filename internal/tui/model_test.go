@@ -156,7 +156,7 @@ func TestGroupGridColumnsRespondToWidth(t *testing.T) {
 	}{
 		{name: "narrow", width: 80, want: 1},
 		{name: "medium", width: 120, want: 2},
-		{name: "wide", width: 180, want: 3},
+		{name: "wide", width: 180, want: 2},
 	}
 
 	for _, tt := range tests {
@@ -166,6 +166,17 @@ func TestGroupGridColumnsRespondToWidth(t *testing.T) {
 				t.Fatalf("groupGridColumns() = %d, want %d for width %d", got, tt.want, tt.width)
 			}
 		})
+	}
+}
+
+func TestRenderChoiceCardKeepsSingleContentRow(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	card := model.renderChoiceCard("Chrome", "1 ventana • navegador", true, 42)
+
+	if strings.Count(card, "\n") != 2 {
+		t.Fatalf("renderChoiceCard() should stay compact with border-only height, got:\n%s", card)
 	}
 }
 

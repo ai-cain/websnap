@@ -78,21 +78,7 @@ func (m Model) renderGroupSelection() string {
 
 	blocks := make([]string, 0, len(m.groups))
 	for i, item := range m.groups {
-		style := m.styles.choiceCard
-		titleStyle := m.styles.label
-		prefix := "  "
-		if i == m.groupIndex {
-			style = m.styles.choiceCardFocused
-			titleStyle = m.styles.accent.Bold(true)
-			prefix = "▶ "
-		}
-
-		content := lipgloss.JoinVertical(
-			lipgloss.Left,
-			titleStyle.Render(prefix+item.title),
-			m.styles.muted.Render(item.detail),
-		)
-		blocks = append(blocks, style.Width(m.groupCardWidth()).Render(content))
+		blocks = append(blocks, m.renderChoiceCard(item.title, item.detail, i == m.groupIndex, m.groupCardWidth()))
 	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left, blocks...)
@@ -124,22 +110,9 @@ func (m Model) renderTargetSelection() string {
 	}
 
 	blocks := make([]string, 0, len(m.targets))
+	cardWidth := m.selectionCardWidth()
 	for i, item := range m.targets {
-		style := m.styles.choiceCard
-		titleStyle := m.styles.label
-		prefix := "  "
-		if i == m.targetIndex {
-			style = m.styles.choiceCardFocused
-			titleStyle = m.styles.accent.Bold(true)
-			prefix = "▶ "
-		}
-
-		content := lipgloss.JoinVertical(
-			lipgloss.Left,
-			titleStyle.Render(prefix+item.title),
-			m.styles.muted.Render(item.detail),
-		)
-		blocks = append(blocks, style.Render(content))
+		blocks = append(blocks, m.renderChoiceCard(item.title, item.detail, i == m.targetIndex, cardWidth))
 	}
 
 	return m.styles.panel.Render(
@@ -154,27 +127,14 @@ func (m Model) renderTargetSelection() string {
 
 func (m Model) renderTabSelection() string {
 	blocks := make([]string, 0, len(m.tabs))
+	cardWidth := m.selectionCardWidth()
 	for i, tab := range m.tabs {
-		style := m.styles.choiceCard
-		titleStyle := m.styles.label
-		prefix := "  "
-		if i == m.tabIndex {
-			style = m.styles.choiceCardFocused
-			titleStyle = m.styles.accent.Bold(true)
-			prefix = "▶ "
-		}
-
 		state := "open tab"
 		if tab.Selected {
 			state = "currently selected"
 		}
 
-		content := lipgloss.JoinVertical(
-			lipgloss.Left,
-			titleStyle.Render(prefix+tab.Title),
-			m.styles.muted.Render(state),
-		)
-		blocks = append(blocks, style.Render(content))
+		blocks = append(blocks, m.renderChoiceCard(tab.Title, state, i == m.tabIndex, cardWidth))
 	}
 
 	return m.styles.panel.Render(
@@ -287,6 +247,63 @@ func (m Model) groupCardWidth() int {
 	}
 
 	return max(24, (contentWidth(m.width)-(columns*2+2))/columns)
+}
+
+func (m Model) selectionCardWidth() int {
+	return max(40, contentWidth(m.width)-8)
+}
+
+func (m Model) renderChoiceCard(title, detail string, focused bool, width int) string {
+	style := m.styles.choiceCard
+	titleStyle := m.styles.label
+	prefix := "  "
+	if focused {
+		style = m.styles.choiceCardFocused
+		titleStyle = m.styles.accent.Bold(true)
+		prefix = "▶ "
+	}
+
+	content := m.renderChoiceLine(prefix+title, detail, titleStyle, width)
+	return style.Width(width).Render(content)
+}
+
+func (m Model) renderChoiceLine(title, detail string, titleStyle lipgloss.Style, width int) string {
+	if width <= 0 {
+		return lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			titleStyle.Render(title),
+			m.styles.muted.Render("  "+detail),
+		)
+	}
+
+	innerWidth := max(12, width-2)
+	rightText := trimText(detail, max(10, innerWidth/3))
+	rightWidth := len([]rune(rightText))
+	leftMax := max(10, innerWidth-rightWidth-2)
+	leftText := trimText(title, leftMax)
+	leftWidth := len([]rune(leftText))
+	gap := innerWidth - leftWidth - rightWidth
+	if gap < 2 {
+		gap = 2
+	}
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		titleStyle.Render(leftText),
+		strings.Repeat(" ", gap),
+		m.styles.muted.Render(rightText),
+	)
+}
+
+func trimText(text string, limit int) string {
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	if limit <= 1 {
+		return string(runes[:max(0, limit)])
+	}
+	return string(runes[:limit-1]) + "…"
 }
 
 func renderGrid(items []string, columns int) string {
