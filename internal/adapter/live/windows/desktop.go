@@ -147,7 +147,19 @@ type powerShellExecutor struct {
 func (e powerShellExecutor) Run(ctx context.Context, script string) ([]byte, error) {
 	encoded := encodeUTF16LEBase64(script)
 	cmd := exec.CommandContext(ctx, e.binary, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
-	return cmd.CombinedOutput()
+	output, err := cmd.Output()
+	if err == nil {
+		return output, nil
+	}
+
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		stderr := strings.TrimSpace(string(exitErr.Stderr))
+		if stderr != "" {
+			return nil, fmt.Errorf("powershell failed: %s", stderr)
+		}
+	}
+
+	return nil, err
 }
 
 func encodeUTF16LEBase64(value string) string {

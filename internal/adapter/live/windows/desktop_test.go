@@ -132,6 +132,23 @@ func TestDesktopPropagatesExecutorError(t *testing.T) {
 	}
 }
 
+func TestDesktopRejectsInvalidJSONOutput(t *testing.T) {
+	t.Parallel()
+
+	executor := &fakeExecutor{
+		outputs: []executorResult{
+			{output: []byte("#< CLIXML")},
+		},
+	}
+
+	desktop := newDesktop(executor)
+
+	_, err := desktop.ListTargets(context.Background())
+	if err == nil {
+		t.Fatal("ListTargets() should reject invalid json output")
+	}
+}
+
 type fakeExecutor struct {
 	outputs []executorResult
 	index   int
