@@ -288,6 +288,8 @@ $result | ConvertTo-Json -Depth 4
 }
 
 func captureWindowScript(req domain.LiveCaptureRequest) string {
+	isBrowser := req.Target.Type == domain.LiveTargetBrowser
+
 	return fmt.Sprintf(`
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName System.Drawing
@@ -316,6 +318,7 @@ public static class Win32 {
 
 $hwnd = [IntPtr]%d
 $tabIndex = %d
+$isBrowser = %t
 [void][Win32]::ShowWindow($hwnd, [Win32]::SW_RESTORE)
 [void][Win32]::SetForegroundWindow($hwnd)
 Start-Sleep -Milliseconds 300
@@ -356,9 +359,59 @@ $rect = New-Object Win32+RECT
 [void][Win32]::GetWindowRect($hwnd, [ref]$rect)
 $width = $rect.Right - $rect.Left
 $height = $rect.Bottom - $rect.Top
+$cropX = 0
+$cropY = 0
+$cropWidth = $width
+$cropHeight = $height
 
 if ($width -le 0 -or $height -le 0) {
   throw "window bounds are invalid for capture"
+}
+
+$contentBounds = $null
+if ($isBrowser) {
+  $root = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+  if ($null -ne $root) {
+    $contentBounds = $root.Current.BoundingRectangle
+
+    $rootWebAreaCondition = New-Object System.Windows.Automation.PropertyCondition(
+      [System.Windows.Automation.AutomationElement]::AutomationIdProperty,
+      'RootWebArea'
+    )
+    $contentElement = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $rootWebAreaCondition)
+
+    if ($null -eq $contentElement) {
+      $documentCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::Document
+      )
+      $contentElement = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $documentCondition)
+    }
+
+    if ($null -eq $contentElement) {
+      $rendererCondition = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ClassNameProperty,
+        'Chrome_RenderWidgetHostHWND'
+      )
+      $contentElement = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $rendererCondition)
+    }
+
+    if ($null -ne $contentElement) {
+      $contentBounds = $contentElement.Current.BoundingRectangle
+    }
+
+    $left = [Math]::Max($rect.Left, [int][Math]::Floor($contentBounds.Left))
+    $top = [Math]::Max($rect.Top, [int][Math]::Floor($contentBounds.Top))
+    $right = [Math]::Min($rect.Right, [int][Math]::Ceiling($contentBounds.Right))
+    $bottom = [Math]::Min($rect.Bottom, [int][Math]::Ceiling($contentBounds.Bottom))
+
+    if ($right -gt $left -and $bottom -gt $top) {
+      $cropX = $left - $rect.Left
+      $cropY = $top - $rect.Top
+      $cropWidth = $right - $left
+      $cropHeight = $bottom - $top
+    }
+  }
 }
 
 $bitmap = New-Object System.Drawing.Bitmap $width, $height
@@ -377,18 +430,35 @@ if (-not $printed) {
   $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
 }
 
+$captureBitmap = $bitmap
+if ($cropX -gt 0 -or $cropY -gt 0 -or $cropWidth -ne $width -or $cropHeight -ne $height) {
+  $sourceRect = New-Object System.Drawing.Rectangle $cropX, $cropY, $cropWidth, $cropHeight
+  $croppedBitmap = New-Object System.Drawing.Bitmap $cropWidth, $cropHeight
+  $croppedGraphics = [System.Drawing.Graphics]::FromImage($croppedBitmap)
+  try {
+    $croppedGraphics.DrawImage($bitmap, 0, 0, $sourceRect, [System.Drawing.GraphicsUnit]::Pixel)
+  } finally {
+    $croppedGraphics.Dispose()
+  }
+
+  $captureBitmap = $croppedBitmap
+}
+
 $stream = New-Object System.IO.MemoryStream
-$bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
+$captureBitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
 $base64 = [System.Convert]::ToBase64String($stream.ToArray())
 
 $graphics.Dispose()
-$bitmap.Dispose()
+$captureBitmap.Dispose()
+if ($captureBitmap -ne $bitmap) {
+  $bitmap.Dispose()
+}
 $stream.Dispose()
 
 [pscustomobject]@{
-  width = $width
-  height = $height
+  width = $cropWidth
+  height = $cropHeight
   pngBase64 = $base64
 } | ConvertTo-Json -Compress
-`, req.Target.WindowHandle, req.TabIndex)
+`, req.Target.WindowHandle, req.TabIndex, isBrowser)
 }

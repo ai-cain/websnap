@@ -165,9 +165,14 @@ func TestCaptureWindowScriptRestoresAndPrintsWindow(t *testing.T) {
 	})
 
 	required := []string{
+		"$isBrowser = true",
 		"ShowWindow($hwnd, [Win32]::SW_RESTORE)",
 		"SetForegroundWindow($hwnd)",
+		"AutomationIdProperty,",
+		"'RootWebArea'",
+		"Chrome_RenderWidgetHostHWND",
 		"PrintWindow($hwnd, $hdc, [Win32]::PW_RENDERFULLCONTENT)",
+		"DrawImage($bitmap, 0, 0, $sourceRect, [System.Drawing.GraphicsUnit]::Pixel)",
 		"CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)",
 		"Start-Sleep -Milliseconds 650",
 	}
@@ -176,6 +181,24 @@ func TestCaptureWindowScriptRestoresAndPrintsWindow(t *testing.T) {
 		if !strings.Contains(script, fragment) {
 			t.Fatalf("captureWindowScript() should contain %q\nscript:\n%s", fragment, script)
 		}
+	}
+}
+
+func TestCaptureWindowScriptDisablesBrowserCropForNonBrowserTargets(t *testing.T) {
+	t.Parallel()
+
+	script := captureWindowScript(domain.LiveCaptureRequest{
+		Target: domain.LiveTarget{
+			WindowHandle: 42,
+			Title:        "README.md - Antigravity",
+			AppName:      "antigravity",
+			Type:         domain.LiveTargetApp,
+		},
+		TabIndex: -1,
+	})
+
+	if !strings.Contains(script, "$isBrowser = false") {
+		t.Fatalf("captureWindowScript() should disable browser crop for non-browser targets\nscript:\n%s", script)
 	}
 }
 
