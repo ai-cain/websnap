@@ -30,8 +30,8 @@ func (c *Catalog) ListTargets(ctx context.Context) ([]domain.LiveTarget, error) 
 	}
 
 	webTargets, err := c.web.ListTargets(ctx)
-	if err != nil || len(webTargets) == 0 {
-		return desktopTargets, nil
+	if err != nil {
+		webTargets = nil
 	}
 
 	filtered := make([]domain.LiveTarget, 0, len(desktopTargets)+len(webTargets))

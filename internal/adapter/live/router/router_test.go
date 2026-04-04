@@ -50,13 +50,14 @@ func TestCatalogPrefersWebBrowserTargetsWhenAvailable(t *testing.T) {
 	}
 }
 
-func TestCatalogFallsBackToDesktopTargetsWhenNoWebTargets(t *testing.T) {
+func TestCatalogHidesDesktopBrowserTargetsWhenWebBridgeHasNoTargets(t *testing.T) {
 	t.Parallel()
 
 	catalog := NewCatalog(
 		fakeCatalog{
 			targets: []domain.LiveTarget{
 				{WindowHandle: 1, Title: "Chrome", AppName: "chrome", Type: domain.LiveTargetBrowser},
+				{WindowHandle: 2, Title: "Downloads", AppName: "explorer", Type: domain.LiveTargetFolder},
 			},
 		},
 		fakeCatalog{},
@@ -67,8 +68,12 @@ func TestCatalogFallsBackToDesktopTargetsWhenNoWebTargets(t *testing.T) {
 		t.Fatalf("ListTargets() error = %v", err)
 	}
 
-	if len(targets) != 1 || targets[0].Provider != "" {
-		t.Fatalf("targets = %#v, want desktop browser fallback", targets)
+	if len(targets) != 1 {
+		t.Fatalf("len(targets) = %d, want 1 non-browser desktop target", len(targets))
+	}
+
+	if targets[0].Type != domain.LiveTargetFolder {
+		t.Fatalf("targets = %#v, want only non-browser desktop target", targets)
 	}
 }
 
