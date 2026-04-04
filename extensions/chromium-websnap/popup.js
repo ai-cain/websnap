@@ -1,4 +1,5 @@
 import { formatHost, getActiveTabFromSnapshot } from './core/browser.mjs';
+import { countTabs, resolveSelectedTab } from './core/popup-state.mjs';
 
 const state = {
   snapshot: null,
@@ -7,34 +8,50 @@ const state = {
   options: {
     saveAs: false
   },
-  busy: false
+  busy: false,
+  view: 'capture'
 };
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   captureActiveButton: document.querySelector('#captureActiveButton'),
+  captureSelectedButton: document.querySelector('#captureSelectedButton'),
   saveAsCheckbox: document.querySelector('#saveAsCheckbox'),
   statusText: document.querySelector('#statusText'),
   windowsContainer: document.querySelector('#windowsContainer'),
-  browserBadge: document.querySelector('#browserBadge')
+  browserBadge: document.querySelector('#browserBadge'),
+  tabCountBadge: document.querySelector('#tabCountBadge'),
+  activeTabSummary: document.querySelector('#activeTabSummary'),
+  selectedTabSummary: document.querySelector('#selectedTabSummary'),
+  viewButtons: [...document.querySelectorAll('[data-view-button]')],
+  panels: {
+    capture: document.querySelector('#view-capture'),
+    tabs: document.querySelector('#view-tabs'),
+    settings: document.querySelector('#view-settings')
+  }
 };
 
 bootstrap().catch((error) => setStatus(error.message || String(error), 'error'));
 
 async function bootstrap() {
   bindEvents();
+  setView(state.view);
   await refreshState();
 }
 
 function bindEvents() {
   elements.refreshButton.addEventListener('click', () => void refreshState());
   elements.captureActiveButton.addEventListener('click', () => void captureActiveTab());
+  elements.captureSelectedButton.addEventListener('click', () => void captureCurrentSelection());
   elements.saveAsCheckbox.addEventListener('change', () => void updateOptions());
+  elements.viewButtons.forEach((button) => {
+    button.addEventListener('click', () => setView(button.dataset.view));
+  });
 }
 
 async function refreshState() {
   setBusy(true);
-  setStatus('Loading browser tabsâ€¦');
+  setStatus('Loading browser tabs…');
 
   try {
     const [{ snapshot }, { options }] = await Promise.all([
@@ -46,18 +63,21 @@ async function refreshState() {
     state.options = options;
     elements.saveAsCheckbox.checked = Boolean(options?.saveAs);
     elements.browserBadge.textContent = titleCase(snapshot?.browser || 'chromium');
+    elements.tabCountBadge.textContent = `${countTabs(snapshot)} tabs`;
 
     primeSelection(snapshot);
-    renderWindows();
+    renderAll();
 
     if ((snapshot?.windows || []).length === 0) {
       setStatus('No http(s) tabs are open right now. Open a normal web page and refresh.');
     } else {
-      setStatus('Choose any tab below or capture the active one.', 'success');
+      setStatus('Choose a tab from the menu and capture it when ready.', 'success');
     }
   } catch (error) {
     setStatus(error.message || String(error), 'error');
     elements.windowsContainer.innerHTML = renderEmptyState('Unable to load tabs from the extension.');
+    elements.activeTabSummary.innerHTML = renderSummaryEmpty('Nothing available yet.');
+    elements.selectedTabSummary.innerHTML = renderSummaryEmpty('Nothing selected yet.');
   } finally {
     setBusy(false);
   }
@@ -72,6 +92,7 @@ async function updateOptions() {
       }
     });
     state.options = options;
+    setStatus(elements.saveAsCheckbox.checked ? 'The extension will ask where to save each capture.' : 'Captures will download directly into the websnap folder.', 'success');
   } catch (error) {
     setStatus(error.message || String(error), 'error');
   }
@@ -79,7 +100,7 @@ async function updateOptions() {
 
 async function captureActiveTab() {
   setBusy(true);
-  setStatus('Capturing active tabâ€¦');
+  setStatus('Capturing active tab…');
 
   try {
     const response = await sendMessage({ type: 'captureActiveTab' });
@@ -92,9 +113,20 @@ async function captureActiveTab() {
   }
 }
 
+async function captureCurrentSelection() {
+  const selected = getSelectedTab();
+  if (!selected) {
+    setStatus('Select a web tab first from the Tabs menu.', 'error');
+    setView('tabs');
+    return;
+  }
+
+  await captureSelectedTab(selected.windowId, selected.tabId);
+}
+
 async function captureSelectedTab(windowId, tabId) {
   setBusy(true);
-  setStatus('Capturing selected tabâ€¦');
+  setStatus('Capturing selected tab…');
 
   try {
     const response = await sendMessage({
@@ -106,12 +138,32 @@ async function captureSelectedTab(windowId, tabId) {
     setStatus(`Saved ${response.filename}`, 'success');
     state.selectedWindowId = windowId;
     state.selectedTabId = tabId;
+    setView('capture');
     await refreshState();
   } catch (error) {
     setStatus(error.message || String(error), 'error');
   } finally {
     setBusy(false);
   }
+}
+
+function renderAll() {
+  renderCapturePanel();
+  renderWindows();
+  updateCaptureButtonState();
+}
+
+function renderCapturePanel() {
+  const active = getActiveTabFromSnapshot(state.snapshot);
+  const selected = getSelectedTab();
+
+  elements.activeTabSummary.innerHTML = active
+    ? renderTabSummary(active, 'Current focused web tab')
+    : renderSummaryEmpty('No active web tab is available right now.');
+
+  elements.selectedTabSummary.innerHTML = selected
+    ? renderTabSummary(selected, selected.active ? 'Currently selected and active' : 'Chosen from the Tabs menu')
+    : renderSummaryEmpty('Pick a tab from the Tabs menu to capture it later.');
 }
 
 function renderWindows() {
@@ -130,7 +182,9 @@ function bindDynamicEvents() {
     button.addEventListener('click', () => {
       state.selectedWindowId = Number(button.dataset.windowId);
       state.selectedTabId = Number(button.dataset.tabId);
-      renderWindows();
+      renderAll();
+      setView('capture');
+      setStatus('Selected tab updated. You can capture it now.', 'success');
     });
   });
 
@@ -166,16 +220,31 @@ function renderTabRow(windowId, tab) {
 
   return `
     <div class="tab-row ${selected ? 'selected' : ''}">
-      <button class="tab-main ghost-button" type="button" data-select-tab="true" data-window-id="${windowId}" data-tab-id="${tab.tabId}">
+      <div class="tab-main">
         <div class="tab-title">${escapeHtml(tab.title)}</div>
         <div class="tab-url">${escapeHtml(host || tab.url)}</div>
-      </button>
+      </div>
       <div class="tab-meta">
         ${activePill}
-        <button type="button" data-capture-tab="true" data-window-id="${windowId}" data-tab-id="${tab.tabId}">Capture</button>
+        <div class="tab-actions">
+          <button type="button" data-select-tab="true" data-window-id="${windowId}" data-tab-id="${tab.tabId}">Select</button>
+          <button type="button" data-capture-tab="true" data-window-id="${windowId}" data-tab-id="${tab.tabId}">Capture</button>
+        </div>
       </div>
     </div>
   `;
+}
+
+function renderTabSummary(tab, subtitle) {
+  return `
+    <div class="summary-title">${escapeHtml(tab.title)}</div>
+    <div class="summary-meta">${escapeHtml(formatHost(tab.url) || tab.url)}</div>
+    <div class="summary-meta">${escapeHtml(subtitle)}</div>
+  `;
+}
+
+function renderSummaryEmpty(message) {
+  return `<div class="summary-empty">${escapeHtml(message)}</div>`;
 }
 
 function renderEmptyState(message) {
@@ -184,27 +253,46 @@ function renderEmptyState(message) {
 
 function primeSelection(snapshot) {
   const active = getActiveTabFromSnapshot(snapshot);
-  if (!active) {
+  const selected = resolveSelectedTab(snapshot, state.selectedWindowId, state.selectedTabId, active);
+  if (!selected) {
     state.selectedWindowId = 0;
     state.selectedTabId = 0;
     return;
   }
 
-  const selectionStillExists = snapshot?.windows?.some((currentWindow) =>
-    currentWindow.windowId === state.selectedWindowId &&
-    currentWindow.tabs.some((tab) => tab.tabId === state.selectedTabId)
-  );
+  state.selectedWindowId = selected.windowId;
+  state.selectedTabId = selected.tabId;
+}
 
-  if (!selectionStillExists) {
-    state.selectedWindowId = active.windowId;
-    state.selectedTabId = active.tabId;
-  }
+function getSelectedTab() {
+  return resolveSelectedTab(
+    state.snapshot,
+    state.selectedWindowId,
+    state.selectedTabId,
+    getActiveTabFromSnapshot(state.snapshot)
+  );
+}
+
+function updateCaptureButtonState() {
+  elements.captureSelectedButton.disabled = state.busy || !getSelectedTab();
 }
 
 function setBusy(nextBusy) {
   state.busy = nextBusy;
   elements.refreshButton.disabled = nextBusy;
   elements.captureActiveButton.disabled = nextBusy;
+  elements.saveAsCheckbox.disabled = nextBusy;
+  updateCaptureButtonState();
+}
+
+function setView(view) {
+  state.view = ['capture', 'tabs', 'settings'].includes(view) ? view : 'capture';
+  elements.viewButtons.forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.view === state.view);
+  });
+  for (const [name, panel] of Object.entries(elements.panels)) {
+    panel.hidden = name !== state.view;
+  }
 }
 
 function setStatus(message, tone = '') {

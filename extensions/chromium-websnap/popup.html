@@ -11,29 +11,88 @@
       <header class="header">
         <div>
           <p class="eyebrow">websnap</p>
-          <h1>Capture visible web tabs</h1>
+          <h1>Capture web tabs without browser chrome</h1>
         </div>
-        <button id="refreshButton" class="ghost-button" type="button">Refresh</button>
+        <div class="header-meta">
+          <span id="browserBadge" class="badge">Chromium</span>
+          <button id="refreshButton" class="ghost-button" type="button">Refresh</button>
+        </div>
       </header>
 
-      <section class="controls">
-        <button id="captureActiveButton" class="primary-button" type="button">Capture active tab</button>
-        <label class="toggle">
-          <input id="saveAsCheckbox" type="checkbox" />
-          <span>Ask where to save</span>
-        </label>
-      </section>
+      <nav class="menu" aria-label="Extension menu">
+        <button class="menu-button is-active" data-view-button data-view="capture" type="button">Capture</button>
+        <button class="menu-button" data-view-button data-view="tabs" type="button">Tabs</button>
+        <button class="menu-button" data-view-button data-view="settings" type="button">Settings</button>
+      </nav>
 
       <section class="status-card">
-        <p id="statusText" class="status">Loading browser tabsâ€¦</p>
+        <p id="statusText" class="status">Loading browser tabs…</p>
       </section>
 
-      <section class="list-section">
+      <section id="view-capture" class="view-panel">
+        <div class="capture-grid">
+          <article class="info-card hero-card">
+            <div class="card-header">
+              <h2>Quick capture</h2>
+              <span id="tabCountBadge" class="badge">0 tabs</span>
+            </div>
+            <p class="card-copy">Capture the active tab immediately or capture the tab you selected from the list.</p>
+            <div class="button-stack">
+              <button id="captureActiveButton" class="primary-button" type="button">Capture active tab</button>
+              <button id="captureSelectedButton" type="button">Capture selected tab</button>
+            </div>
+          </article>
+
+          <article class="info-card">
+            <div class="card-header">
+              <h2>Active tab</h2>
+              <span class="badge">Now</span>
+            </div>
+            <div id="activeTabSummary" class="summary-card"></div>
+          </article>
+
+          <article class="info-card">
+            <div class="card-header">
+              <h2>Selected tab</h2>
+              <span class="badge">Choice</span>
+            </div>
+            <div id="selectedTabSummary" class="summary-card"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-tabs" class="view-panel" hidden>
         <div class="list-header">
           <h2>Open web tabs</h2>
-          <span id="browserBadge" class="badge">Chromium</span>
+          <span class="muted-note">Select one to make it the capture target</span>
         </div>
         <div id="windowsContainer" class="windows"></div>
+      </section>
+
+      <section id="view-settings" class="view-panel" hidden>
+        <div class="settings-grid">
+          <article class="info-card">
+            <div class="card-header">
+              <h2>Save behavior</h2>
+            </div>
+            <label class="toggle">
+              <input id="saveAsCheckbox" type="checkbox" />
+              <span>Ask where to save before downloading</span>
+            </label>
+            <p class="card-copy">When disabled, captures download directly into a <strong>websnap/</strong> folder under your browser downloads location.</p>
+          </article>
+
+          <article class="info-card">
+            <div class="card-header">
+              <h2>What appears here</h2>
+            </div>
+            <ul class="notes-list">
+              <li>Only normal <code>http(s)</code> tabs are listed.</li>
+              <li>Internal pages like <code>chrome://</code> are ignored.</li>
+              <li>The screenshot contains visible page content, not browser tabs or the address bar.</li>
+            </ul>
+          </article>
+        </div>
       </section>
     </main>
 

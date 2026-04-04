@@ -19,7 +19,7 @@ The extension is now a **standalone MV3 browser capture MVP**:
 - lists open `http(s)` tabs across normal Chromium windows
 - captures the **visible tab content** instead of the whole browser chrome
 - downloads the PNG directly from the extension
-- offers a popup UI to refresh, inspect, and capture tabs
+- offers a popup menu with Capture / Tabs / Settings
 
 ## Local loading
 

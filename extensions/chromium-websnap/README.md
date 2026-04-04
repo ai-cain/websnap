@@ -18,15 +18,18 @@ It no longer depends on the old local WebSocket bridge.
 - lists open `http(s)` tabs across Chromium windows
 - captures visible tab content with no browser chrome around it
 - downloads the PNG directly from the extension
-- lets the user choose any currently open web tab from the popup
+- shows a popup menu with:
+  - **Capture** — quick actions for active/selected tab
+  - **Tabs** — browse and select any open tab
+  - **Settings** — save behavior and extension notes
 
 ## Included files
 
-- `manifest.json` â€” MV3 manifest
-- `service_worker.js` â€” runtime logic for tab discovery, capture, and download
-- `popup.html` / `popup.css` / `popup.js` â€” minimal extension UI
-- `core/` â€” shared browser/naming helpers
-- `test/` â€” lightweight Node tests for helper logic
+- `manifest.json` — MV3 manifest
+- `service_worker.js` — runtime logic for tab discovery, capture, and download
+- `popup.html` / `popup.css` / `popup.js` — popup menu UI
+- `core/` — shared browser/naming/popup helpers
+- `test/` — lightweight Node tests for pure helper logic
 
 ## Quick local verification
 
