@@ -116,6 +116,7 @@ func (m Model) buildLiveRequest() (domain.LiveCaptureRequest, error) {
 
 	if m.hasSelectedTab {
 		req.TabIndex = m.selectedTab.Index
+		req.TabID = m.selectedTab.ID
 	}
 
 	return req, req.Validate()
@@ -290,7 +291,7 @@ func displayAppName(appName string) string {
 	switch normalizedAppName(appName) {
 	case "chrome":
 		return "Chrome"
-	case "msedge":
+	case "msedge", "edge":
 		return "Edge"
 	case "explorer":
 		return "Explorador"

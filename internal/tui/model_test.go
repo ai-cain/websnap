@@ -110,6 +110,40 @@ func TestModelBuildLiveRequest(t *testing.T) {
 	}
 }
 
+func TestModelBuildLiveRequestCarriesExtensionTabID(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.selectedTarget = domain.LiveTarget{
+		WindowHandle:    7,
+		BrowserWindowID: 7,
+		Title:           "X",
+		AppName:         "chrome",
+		Type:            domain.LiveTargetBrowser,
+		CanListTabs:     true,
+		Provider:        domain.LiveTargetProviderBrowserExtension,
+	}
+	model.selectedTab = domain.BrowserTab{
+		Index:    2,
+		ID:       301,
+		WindowID: 7,
+		Title:    "Timeline",
+		Selected: true,
+	}
+	model.hasSelectedTarget = true
+	model.hasSelectedTab = true
+	model.liveOut.SetValue("captures/timeline.png")
+
+	req, err := model.buildLiveRequest()
+	if err != nil {
+		t.Fatalf("buildLiveRequest() error = %v", err)
+	}
+
+	if req.TabIndex != 2 || req.TabID != 301 {
+		t.Fatalf("request = %#v, want both tab index and extension tab id", req)
+	}
+}
+
 func TestSuggestLiveOutputPathPrefersMeaningfulBrowserSegment(t *testing.T) {
 	t.Parallel()
 

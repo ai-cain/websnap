@@ -125,6 +125,8 @@ At the moment, this repository contains:
 - an initial Go CLI bootstrap
 - a styled interactive TUI flow
 - the `shot` orchestration path
+- live capture for open apps and folders on Windows
+- an extension-backed browser bridge for Chromium browsers
 - `chromedp` browser integration
 - filesystem output persistence
 - domain and CLI tests
@@ -245,14 +247,25 @@ websnap interactive
 
 The current TUI provides:
 
-- URL
-- width
-- height
-- capture mode selection: viewport / selector / full-page
-- selector input when selector mode is active
+- open app / folder selection
+- browser-window selection
+- browser-tab selection
 - output path (optional)
 - keyboard-first navigation
 - styled panels, focus states, and capture feedback
+
+### Browser-only page capture
+
+For Chromium browsers, `websnap` can use the unpacked extension in [`extensions/chromium-websnap`](extensions/chromium-websnap) so browser targets capture the **visible tab content** instead of the whole browser window chrome.
+
+Load it with:
+
+1. `chrome://extensions` or `edge://extensions`
+2. enable **Developer mode**
+3. **Load unpacked**
+4. choose `extensions/chromium-websnap`
+
+When the extension is loaded and `websnap` is running, press `R` in the interactive UI to refresh browser targets from the extension bridge.
 
 ### Scripted mode
 

@@ -25,6 +25,22 @@ func TestLiveCaptureRequestValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid browser extension capture",
+			req: LiveCaptureRequest{
+				Target: LiveTarget{
+					WindowHandle:    7,
+					BrowserWindowID: 7,
+					Title:           "WhatsApp Web",
+					AppName:         "chrome",
+					Type:            LiveTargetBrowser,
+					CanListTabs:     true,
+					Provider:        LiveTargetProviderBrowserExtension,
+				},
+				TabID: 301,
+				Out:   "captures/whatsapp-web.png",
+			},
+		},
+		{
 			name: "valid generic app capture without tab",
 			req: LiveCaptureRequest{
 				Target: LiveTarget{
@@ -72,6 +88,32 @@ func TestLiveCaptureRequestValidate(t *testing.T) {
 				},
 				TabIndex: -1,
 				Out:      "captures/live-browser.jpg",
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects extension provider for non browser target",
+			req: LiveCaptureRequest{
+				Target: LiveTarget{
+					WindowHandle:    12,
+					BrowserWindowID: 12,
+					Title:           "README.md - Antigravity",
+					AppName:         "antigravity",
+					Type:            LiveTargetApp,
+					Provider:        LiveTargetProviderBrowserExtension,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects extension provider without browser window id",
+			req: LiveCaptureRequest{
+				Target: LiveTarget{
+					Title:    "X",
+					AppName:  "chrome",
+					Type:     LiveTargetBrowser,
+					Provider: LiveTargetProviderBrowserExtension,
+				},
 			},
 			wantErr: true,
 		},
