@@ -211,6 +211,28 @@ func TestGroupSelectionRendersCards(t *testing.T) {
 	}
 }
 
+func TestGroupSelectionShowsBrowserExtensionHintWhenNoBrowserGroupExists(t *testing.T) {
+	t.Parallel()
+
+	model := NewModel(&fakeStudio{})
+	model.phase = phaseEditing
+	model.width = 140
+	model.groups = []groupMenuItem{
+		{
+			title:  "Antigravity",
+			detail: "1 ventana • app",
+			targets: []domain.LiveTarget{
+				{WindowHandle: 1, Title: "README.md", AppName: "antigravity", Type: domain.LiveTargetApp},
+			},
+		},
+	}
+
+	view := model.renderGroupSelection()
+	if !strings.Contains(view, "Browser targets are extension-backed now") {
+		t.Fatalf("renderGroupSelection() should explain why browser targets are missing, got:\n%s", view)
+	}
+}
+
 func TestGroupGridColumnsRespondToWidth(t *testing.T) {
 	t.Parallel()
 

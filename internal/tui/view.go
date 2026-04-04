@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ai-cain/websnap/internal/domain"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -90,13 +91,21 @@ func (m Model) renderGroupSelection() string {
 		body = renderGrid(blocks, m.groupGridColumns())
 	}
 
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
+	parts := []string{
 		m.renderSectionHeader("Select the app group", "Example: Antigravity, Chrome, Explorer. Enter opens that group and shows its windows."),
 		body,
 		"",
-		m.styles.accent.Render("Selected: "+m.currentGroupTitle()),
-	)
+		m.styles.accent.Render("Selected: " + m.currentGroupTitle()),
+	}
+
+	if !m.hasBrowserGroup() {
+		parts = append(parts,
+			"",
+			m.renderBrowserExtensionHint(),
+		)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
 func (m Model) renderTargetSelection() string {
@@ -189,6 +198,18 @@ func (m Model) renderStatus() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+}
+
+func (m Model) renderBrowserExtensionHint() string {
+	innerWidth := max(24, contentWidth(m.width)-m.styles.panel.GetHorizontalFrameSize())
+	panelStyle := m.styles.panel.Width(innerWidth)
+	bodyStyle := lipgloss.NewStyle().Foreground(m.styles.muted.GetForeground()).Width(innerWidth)
+
+	return panelStyle.Render(lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.styles.label.Render("Browser targets are extension-backed now"),
+		bodyStyle.Render("If you expected Chrome or Edge here: load extensions/chromium-websnap, keep at least one http(s) tab open, click the extension once, then press R."),
+	))
 }
 
 func (m Model) instructionsForCurrentScreen() string {
@@ -378,4 +399,18 @@ func (m Model) currentGroupTitle() string {
 	}
 
 	return m.groups[m.groupIndex].title
+}
+
+func (m Model) hasBrowserGroup() bool {
+	for _, group := range m.groups {
+		if len(group.targets) == 0 {
+			continue
+		}
+
+		if group.targets[0].Type == domain.LiveTargetBrowser {
+			return true
+		}
+	}
+
+	return false
 }
