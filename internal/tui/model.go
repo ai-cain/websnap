@@ -378,7 +378,7 @@ func suggestLiveOutputPath(target domain.LiveTarget, tab domain.BrowserTab, hasT
 		name = tab.Title
 	}
 
-	name = strings.TrimSpace(name)
+	name = preferredCaptureName(name, target.AppName)
 	if name == "" {
 		name = target.AppName
 	}
@@ -389,6 +389,123 @@ func suggestLiveOutputPath(target domain.LiveTarget, tab domain.BrowserTab, hasT
 	}
 
 	return filepath.Join("captures", name+".png")
+}
+
+func preferredCaptureName(title, appName string) string {
+	title = strings.TrimSpace(stripBrowserTitleSuffix(title))
+	if title == "" {
+		return ""
+	}
+
+	segments := splitTitleSegments(title)
+	best := ""
+	bestScore := -1
+	for _, segment := range segments {
+		segment = strings.TrimSpace(segment)
+		if segment == "" || isGenericTitleSegment(segment, appName) {
+			continue
+		}
+
+		score := scoreTitleSegment(segment)
+		if score > bestScore {
+			best = segment
+			bestScore = score
+		}
+	}
+
+	if strings.TrimSpace(best) != "" {
+		return best
+	}
+
+	if len(segments) > 0 {
+		return strings.TrimSpace(segments[0])
+	}
+
+	return title
+}
+
+func stripBrowserTitleSuffix(value string) string {
+	suffixes := []string{
+		" - Google Chrome",
+		" - Chrome",
+		" - Microsoft Edge",
+		" - Edge",
+		" - Brave",
+		" - Opera",
+	}
+
+	trimmed := strings.TrimSpace(value)
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(trimmed, suffix) {
+			return strings.TrimSpace(strings.TrimSuffix(trimmed, suffix))
+		}
+	}
+
+	return trimmed
+}
+
+func splitTitleSegments(value string) []string {
+	normalized := value
+	for _, separator := range []string{" — ", " – ", " | ", " • "} {
+		normalized = strings.ReplaceAll(normalized, separator, " - ")
+	}
+
+	parts := strings.Split(normalized, " - ")
+	segments := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		segments = append(segments, part)
+	}
+
+	if len(segments) == 0 && strings.TrimSpace(value) != "" {
+		return []string{strings.TrimSpace(value)}
+	}
+
+	return segments
+}
+
+func isGenericTitleSegment(value, appName string) bool {
+	normalized := sanitizeFileName(value)
+	if normalized == "" {
+		return true
+	}
+
+	generic := map[string]struct{}{
+		"google-chrome":          {},
+		"chrome":                 {},
+		"microsoft-edge":         {},
+		"edge":                   {},
+		"brave":                  {},
+		"opera":                  {},
+		"explorador-de-archivos": {},
+		"file-explorer":          {},
+	}
+	if _, ok := generic[normalized]; ok {
+		return true
+	}
+
+	return normalized == sanitizeFileName(appName)
+}
+
+func scoreTitleSegment(value string) int {
+	letters := 0
+	digits := 0
+	separators := 0
+	for _, r := range value {
+		switch {
+		case unicode.IsLetter(r):
+			letters++
+		case unicode.IsDigit(r):
+			digits++
+		case unicode.IsSpace(r), r == '-', r == '_':
+			separators++
+		}
+	}
+
+	return letters*4 + separators - digits*2
 }
 
 func sanitizeFileName(value string) string {

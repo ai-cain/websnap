@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -106,6 +107,43 @@ func TestModelBuildLiveRequest(t *testing.T) {
 
 	if req.Target.WindowHandle != 1312510 || req.Out != "captures/folder.png" || req.TabIndex != -1 {
 		t.Fatalf("request = %#v, want folder target with no tab and custom output", req)
+	}
+}
+
+func TestSuggestLiveOutputPathPrefersMeaningfulBrowserSegment(t *testing.T) {
+	t.Parallel()
+
+	target := domain.LiveTarget{AppName: "chrome", Title: `12°02'15.0"S 76°57'45.7"W - Google Maps`}
+	tab := domain.BrowserTab{Title: `12°02'15.0"S 76°57'45.7"W - Google Maps`}
+
+	got := suggestLiveOutputPath(target, tab, true)
+	want := filepath.Join("captures", "google-maps.png")
+	if got != want {
+		t.Fatalf("suggestLiveOutputPath() = %q, want %q", got, want)
+	}
+}
+
+func TestSuggestLiveOutputPathStripsBrowserSuffix(t *testing.T) {
+	t.Parallel()
+
+	target := domain.LiveTarget{AppName: "chrome", Title: "Your Repositories - Google Chrome"}
+
+	got := suggestLiveOutputPath(target, domain.BrowserTab{}, false)
+	want := filepath.Join("captures", "your-repositories.png")
+	if got != want {
+		t.Fatalf("suggestLiveOutputPath() = %q, want %q", got, want)
+	}
+}
+
+func TestSuggestLiveOutputPathPrefersFolderNameOverGenericExplorerSuffix(t *testing.T) {
+	t.Parallel()
+
+	target := domain.LiveTarget{AppName: "explorer", Title: "portfolio - Explorador de archivos"}
+
+	got := suggestLiveOutputPath(target, domain.BrowserTab{}, false)
+	want := filepath.Join("captures", "portfolio.png")
+	if got != want {
+		t.Fatalf("suggestLiveOutputPath() = %q, want %q", got, want)
 	}
 }
 

@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"fmt"
@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	initConsoleUTF8()
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: unable to determine working directory: %v\n", err)
