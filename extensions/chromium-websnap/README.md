@@ -1,4 +1,4 @@
-# websnap Browser Bridge Extension
+# websnap Chromium extension scaffold
 
 Load this folder as an unpacked extension in a Chromium browser:
 
@@ -7,16 +7,25 @@ Load this folder as an unpacked extension in a Chromium browser:
 3. Click **Load unpacked**
 4. Select this `extensions/chromium-websnap` folder
 
-When `websnap` is running, the extension connects to `ws://127.0.0.1:38971/ws`.
+## Current state
 
-## What it does
+This folder is the preserved browser-extension scaffold from the original split.
 
-- Streams open Chromium windows/tabs back to `websnap`
-- Lets `websnap` capture **visible tab content** instead of the whole browser window
-- Keeps apps/folders on the native Windows capture path
+It is **not a standalone finished product yet**.
+The current service worker still expects a local WebSocket bridge at:
 
-## Current scope
+```text
+ws://127.0.0.1:38971/ws
+```
 
-- Designed for Chromium browsers first
-- Chrome and Edge are the primary targets
-- Browser capture is extension-backed; desktop apps/folders stay native
+That bridge no longer lives in this repository after the CLI/desktop code moved to `desksnap`.
+
+## What remains here
+
+- Chromium window/tab discovery prototype
+- visible-tab capture prototype
+- base manifest and service worker structure
+
+## Next direction
+
+To turn this into the real `websnap` product, the extension still needs its own standalone UX and distribution flow, instead of depending on the old local bridge.
