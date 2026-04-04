@@ -1,225 +1,135 @@
-const SERVER_URL = "ws://127.0.0.1:38971/ws";
+import { buildSnapshot, detectBrowserName, getActiveTabFromSnapshot } from './core/browser.mjs';
+import { buildCaptureFilename } from './core/naming.mjs';
 
-let socket = null;
-let reconnectTimer = null;
+const DEFAULT_OPTIONS = {
+  saveAs: false
+};
 
-function detectBrowserName() {
-  const ua = self.navigator.userAgent.toLowerCase();
-  if (ua.includes("edg/")) {
-    return "edge";
-  }
-  if (ua.includes("opr/")) {
-    return "opera";
-  }
-  if (ua.includes("brave")) {
-    return "brave";
-  }
-  return "chrome";
-}
+chrome.runtime.onInstalled.addListener(async () => {
+  const current = await storageGet(DEFAULT_OPTIONS);
+  await storageSet({ ...DEFAULT_OPTIONS, ...current });
+});
 
-function isWebTab(tab) {
-  if (!tab || typeof tab.url !== "string") {
-    return false;
-  }
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  handleMessage(message)
+    .then((result) => sendResponse({ ok: true, ...result }))
+    .catch((error) => sendResponse({ ok: false, error: error?.message || String(error) }));
 
-  return tab.url.startsWith("http://") || tab.url.startsWith("https://");
-}
+  return true;
+});
 
-async function buildSnapshot() {
-  const browser = detectBrowserName();
-  const windows = await chrome.windows.getAll({
-    populate: true,
-    windowTypes: ["normal"]
-  });
-
-  const payloadWindows = windows
-    .map((window) => {
-      const tabs = (window.tabs || [])
-        .filter(isWebTab)
-        .map((tab) => ({
-          tabId: tab.id,
-          index: tab.index,
-          title: tab.title || tab.url || "Untitled tab",
-          url: tab.url || "",
-          active: Boolean(tab.active)
-        }));
-
-      if (tabs.length === 0) {
-        return null;
+async function handleMessage(message) {
+  switch (message?.type) {
+    case 'getSnapshot': {
+      return { snapshot: await createSnapshot() };
+    }
+    case 'getOptions': {
+      return { options: await storageGet(DEFAULT_OPTIONS) };
+    }
+    case 'setOptions': {
+      const nextOptions = { ...DEFAULT_OPTIONS, ...(message.options || {}) };
+      await storageSet(nextOptions);
+      return { options: nextOptions };
+    }
+    case 'captureActiveTab': {
+      const snapshot = await createSnapshot();
+      const active = getActiveTabFromSnapshot(snapshot);
+      if (!active) {
+        throw new Error('No active web tab is available to capture');
       }
 
-      const activeTab = tabs.find((tab) => tab.active) || tabs[0];
-      return {
-        windowId: window.id,
-        appName: browser,
-        title: activeTab?.title || `${browser} window`,
-        tabs
-      };
-    })
-    .filter(Boolean);
+      const options = await storageGet(DEFAULT_OPTIONS);
+      return captureTab({
+        windowId: active.windowId,
+        tabId: active.tabId,
+        saveAs: options.saveAs
+      });
+    }
+    case 'captureTab': {
+      const options = await storageGet(DEFAULT_OPTIONS);
+      return captureTab({
+        windowId: Number(message.windowId),
+        tabId: Number(message.tabId),
+        saveAs: typeof message.saveAs === 'boolean' ? message.saveAs : options.saveAs
+      });
+    }
+    default:
+      throw new Error(`Unsupported message type: ${message?.type || 'unknown'}`);
+  }
+}
+
+async function createSnapshot() {
+  const browser = detectBrowserName(self.navigator.userAgent);
+  const windows = await chrome.windows.getAll({
+    populate: true,
+    windowTypes: ['normal']
+  });
+
+  return buildSnapshot(windows, browser);
+}
+
+async function captureTab({ windowId, tabId, saveAs }) {
+  if (!windowId || !tabId) {
+    throw new Error('windowId and tabId are required');
+  }
+
+  await chrome.windows.update(windowId, { focused: true });
+  await chrome.tabs.update(tabId, { active: true });
+  await delay(250);
+
+  const tab = await chrome.tabs.get(tabId);
+  const pngDataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+  const filename = buildCaptureFilename({
+    title: tab?.title || '',
+    url: tab?.url || '',
+    browserName: detectBrowserName(self.navigator.userAgent),
+    now: new Date()
+  });
+
+  const downloadId = await chrome.downloads.download({
+    url: pngDataUrl,
+    filename,
+    saveAs: Boolean(saveAs)
+  });
 
   return {
-    type: "snapshot",
-    browser,
-    windows: payloadWindows
+    downloadId,
+    filename,
+    tab: {
+      tabId,
+      windowId,
+      title: tab?.title || '',
+      url: tab?.url || ''
+    }
   };
 }
 
-function sendMessage(message) {
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    return;
-  }
-
-  socket.send(JSON.stringify(message));
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function sendSnapshot() {
-  try {
-    sendMessage(await buildSnapshot());
-  } catch (error) {
-    console.warn("websnap: unable to build snapshot", error);
-  }
-}
-
-function scheduleReconnect() {
-  if (reconnectTimer !== null) {
-    return;
-  }
-
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    connect();
-  }, 1500);
-}
-
-async function captureWindowTab(message) {
-  const windowId = Number(message.windowId);
-  const tabId = Number(message.tabId);
-
-  if (!windowId || !tabId) {
-    sendMessage({
-      id: message.id,
-      type: "capture-result",
-      error: "windowId and tabId are required"
+function storageGet(defaults) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(defaults, (items) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve(items);
     });
-    return;
-  }
-
-  try {
-    await chrome.windows.update(windowId, { focused: true });
-    await chrome.tabs.update(tabId, { active: true });
-    await new Promise((resolve) => setTimeout(resolve, 350));
-
-    const pngDataUrl = await chrome.tabs.captureVisibleTab(windowId, {
-      format: "png"
-    });
-
-    sendMessage({
-      id: message.id,
-      type: "capture-result",
-      pngDataUrl
-    });
-
-    await sendSnapshot();
-  } catch (error) {
-    sendMessage({
-      id: message.id,
-      type: "capture-result",
-      error: error?.message || String(error)
-    });
-  }
-}
-
-function handleSocketMessage(event) {
-  let message;
-  try {
-    message = JSON.parse(event.data);
-  } catch (error) {
-    console.warn("websnap: invalid server message", error);
-    return;
-  }
-
-  if (message.type === "capture") {
-    captureWindowTab(message);
-  }
-}
-
-function connect() {
-  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-    return;
-  }
-
-  socket = new WebSocket(SERVER_URL);
-
-  socket.addEventListener("open", async () => {
-    sendMessage({
-      type: "hello",
-      browser: detectBrowserName()
-    });
-    await sendSnapshot();
-  });
-
-  socket.addEventListener("message", handleSocketMessage);
-
-  socket.addEventListener("close", () => {
-    socket = null;
-    scheduleReconnect();
-  });
-
-  socket.addEventListener("error", () => {
-    if (socket) {
-      socket.close();
-    }
   });
 }
 
-async function refreshSnapshotIfConnected() {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    await sendSnapshot();
-    return;
-  }
-
-  connect();
+function storageSet(values) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set(values, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
 }
-
-chrome.runtime.onInstalled.addListener(() => {
-  connect();
-});
-
-chrome.runtime.onStartup.addListener(() => {
-  connect();
-});
-
-chrome.action.onClicked.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.tabs.onActivated.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.tabs.onUpdated.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.tabs.onRemoved.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.tabs.onCreated.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.windows.onFocusChanged.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.windows.onRemoved.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-chrome.windows.onCreated.addListener(() => {
-  refreshSnapshotIfConnected();
-});
-
-connect();

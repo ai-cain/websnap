@@ -1,0 +1,233 @@
+:root {
+  color-scheme: dark;
+  --bg: #14110f;
+  --panel: #1b1714;
+  --panel-strong: #241d18;
+  --border: #3b312a;
+  --accent: #d4a574;
+  --text: #f5efe6;
+  --muted: #c7b8a7;
+  --success: #b5d99c;
+  --danger: #fca5a5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 Inter, Segoe UI, system-ui, sans-serif;
+}
+
+.app {
+  width: 420px;
+  min-height: 520px;
+  padding: 16px;
+}
+
+.header,
+.controls,
+.list-header,
+.tab-row,
+.tab-meta {
+  display: flex;
+  align-items: center;
+}
+
+.header,
+.controls,
+.list-header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+}
+
+h2 {
+  font-size: 13px;
+}
+
+.controls,
+.status-card,
+.window-card {
+  margin-top: 14px;
+}
+
+.status-card,
+.window-card {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 12px;
+}
+
+.status-card {
+  padding: 10px 12px;
+}
+
+.status {
+  color: var(--muted);
+}
+
+.status.success {
+  color: var(--success);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-strong);
+  color: var(--text);
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.ghost-button {
+  background: transparent;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.badge,
+.active-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge {
+  background: rgba(212, 165, 116, 0.18);
+  color: var(--accent);
+}
+
+.active-pill {
+  background: rgba(181, 217, 156, 0.16);
+  color: var(--success);
+}
+
+.windows {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.window-card {
+  padding: 10px;
+}
+
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.window-title {
+  font-weight: 700;
+}
+
+.window-subtitle,
+.tab-url {
+  color: var(--muted);
+}
+
+.window-subtitle {
+  font-size: 12px;
+}
+
+.tab-list {
+  display: grid;
+  gap: 8px;
+}
+
+.tab-row {
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #191512;
+}
+
+.tab-row.selected {
+  border-color: var(--accent);
+  background: #241d18;
+}
+
+.tab-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.tab-title,
+.tab-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-title {
+  font-weight: 600;
+}
+
+.tab-meta {
+  gap: 8px;
+}
+
+.empty-state {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}

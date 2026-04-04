@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>websnap</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <p class="eyebrow">websnap</p>
+          <h1>Capture visible web tabs</h1>
+        </div>
+        <button id="refreshButton" class="ghost-button" type="button">Refresh</button>
+      </header>
+
+      <section class="controls">
+        <button id="captureActiveButton" class="primary-button" type="button">Capture active tab</button>
+        <label class="toggle">
+          <input id="saveAsCheckbox" type="checkbox" />
+          <span>Ask where to save</span>
+        </label>
+      </section>
+
+      <section class="status-card">
+        <p id="statusText" class="status">Loading browser tabs…</p>
+      </section>
+
+      <section class="list-section">
+        <div class="list-header">
+          <h2>Open web tabs</h2>
+          <span id="browserBadge" class="badge">Chromium</span>
+        </div>
+        <div id="windowsContainer" class="windows"></div>
+      </section>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

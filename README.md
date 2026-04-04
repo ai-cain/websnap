@@ -1,6 +1,6 @@
 # websnap
 
-Web-first screenshot capture is now being prepared as the browser-extension product.
+`websnap` is now being reshaped into the browser-extension product.
 
 ## Current repository focus
 
@@ -12,6 +12,15 @@ Current extension folder:
 extensions/chromium-websnap
 ```
 
+## What the extension does now
+
+The extension is now a **standalone MV3 browser capture MVP**:
+
+- lists open `http(s)` tabs across normal Chromium windows
+- captures the **visible tab content** instead of the whole browser chrome
+- downloads the PNG directly from the extension
+- offers a popup UI to refresh, inspect, and capture tabs
+
 ## Local loading
 
 In Chrome or Edge:
@@ -20,6 +29,7 @@ In Chrome or Edge:
 2. Enable developer mode
 3. Click **Load unpacked**
 4. Select `extensions/chromium-websnap`
+5. Open the extension popup and capture a tab
 
 ## Notes
 

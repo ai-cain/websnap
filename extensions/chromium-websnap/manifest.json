@@ -1,18 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "websnap Browser Bridge",
-  "version": "0.1.0",
-  "description": "Streams Chromium window/tab metadata to websnap and captures visible tab content on request.",
+  "name": "websnap",
+  "version": "0.2.0",
+  "description": "Capture visible web tab content from Chromium browsers without the browser chrome.",
   "permissions": [
-    "tabs"
+    "tabs",
+    "downloads",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "service_worker.js"
+    "service_worker": "service_worker.js",
+    "type": "module"
   },
   "action": {
-    "default_title": "websnap Browser Bridge"
+    "default_title": "websnap",
+    "default_popup": "popup.html"
   }
 }
