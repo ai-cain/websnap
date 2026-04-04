@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ai-cain/websnap/internal/domain"
@@ -146,6 +147,35 @@ func TestDesktopRejectsInvalidJSONOutput(t *testing.T) {
 	_, err := desktop.ListTargets(context.Background())
 	if err == nil {
 		t.Fatal("ListTargets() should reject invalid json output")
+	}
+}
+
+func TestCaptureWindowScriptRestoresAndPrintsWindow(t *testing.T) {
+	t.Parallel()
+
+	script := captureWindowScript(domain.LiveCaptureRequest{
+		Target: domain.LiveTarget{
+			WindowHandle: 131584,
+			Title:        "Maps - Google Chrome",
+			AppName:      "chrome",
+			Type:         domain.LiveTargetBrowser,
+			CanListTabs:  true,
+		},
+		TabIndex: 2,
+	})
+
+	required := []string{
+		"ShowWindow($hwnd, [Win32]::SW_RESTORE)",
+		"SetForegroundWindow($hwnd)",
+		"PrintWindow($hwnd, $hdc, [Win32]::PW_RENDERFULLCONTENT)",
+		"CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)",
+		"Start-Sleep -Milliseconds 650",
+	}
+
+	for _, fragment := range required {
+		if !strings.Contains(script, fragment) {
+			t.Fatalf("captureWindowScript() should contain %q\nscript:\n%s", fragment, script)
+		}
 	}
 }
 

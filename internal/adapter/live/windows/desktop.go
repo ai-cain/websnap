@@ -295,6 +295,9 @@ Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class Win32 {
+  public const int SW_RESTORE = 9;
+  public const uint PW_RENDERFULLCONTENT = 0x00000002;
+
   [StructLayout(LayoutKind.Sequential)]
   public struct RECT {
     public int Left;
@@ -304,14 +307,18 @@ public static class Win32 {
   }
 
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
 }
 "@
 
 $hwnd = [IntPtr]%d
 $tabIndex = %d
+[void][Win32]::ShowWindow($hwnd, [Win32]::SW_RESTORE)
 [void][Win32]::SetForegroundWindow($hwnd)
-Start-Sleep -Milliseconds 200
+Start-Sleep -Milliseconds 300
 
 if ($tabIndex -ge 0) {
   $root = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
@@ -342,7 +349,7 @@ if ($tabIndex -ge 0) {
     }
   }
 
-  Start-Sleep -Milliseconds 350
+  Start-Sleep -Milliseconds 650
 }
 
 $rect = New-Object Win32+RECT
@@ -350,9 +357,25 @@ $rect = New-Object Win32+RECT
 $width = $rect.Right - $rect.Left
 $height = $rect.Bottom - $rect.Top
 
+if ($width -le 0 -or $height -le 0) {
+  throw "window bounds are invalid for capture"
+}
+
 $bitmap = New-Object System.Drawing.Bitmap $width, $height
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+$graphics.Clear([System.Drawing.Color]::Black)
+
+$hdc = $graphics.GetHdc()
+$printed = $false
+try {
+  $printed = [Win32]::PrintWindow($hwnd, $hdc, [Win32]::PW_RENDERFULLCONTENT)
+} finally {
+  $graphics.ReleaseHdc($hdc)
+}
+
+if (-not $printed) {
+  $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+}
 
 $stream = New-Object System.IO.MemoryStream
 $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
